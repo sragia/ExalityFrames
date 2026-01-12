@@ -244,7 +244,7 @@ ns.EXFrames.assets = {
       return {
         bgFile = "Interface\\BUTTONS\\WHITE8X8.blp",
         edgeFile = "Interface\\BUTTONS\\WHITE8X8.blp",
-        edgeSize = EXUI:ScalePixel(1)
+        edgeSize = ns.EXFrames:ScalePixel(1)
       }
     end
   },
