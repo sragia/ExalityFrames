@@ -306,6 +306,7 @@ dropdown.Create = function(self, options, parent)
     end
     input.Destroy = function(self)
         self.optionData = nil
+        self:SetValue('isOpen', false)
         dropdown.pool:Release(self)
     end
     input:Show()
