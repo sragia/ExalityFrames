@@ -6,13 +6,11 @@ local EXFrames = ns.EXFrames
 local pixelPerfect = EXFrames:GetFrame('pixel-perfect')
 
 pixelPerfect.UIScale = 1
-pixelPerfect.Mult = 1
 
 pixelPerfect.Initialize = function(self)
   local _, screenHeight = GetPhysicalScreenSize()
   local perfect = 768 / screenHeight
   self.UIScale = UIParent:GetScale()
-  self.Mult = perfect / self.UIScale
 end
 
 function EXFrames.ScalePixel(self, value)

@@ -102,14 +102,23 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
         f.optionContainer.scrollFrame:Hide()
     end
 
-    for value, label in EXFrames.utils.spairs(options, function(t, a, b) return t[a] < t[b] end) do
+    for value, label in EXFrames.utils.spairs(options, function(t, a, b)
+        if (type(t[a]) == 'table') then
+            if (t[a].order) then
+                return t[a].order < t[b].order
+            end
+            return t[a].label < t[b].label
+        end
+        return t[a] < t[b]
+    end) do
+        local labelText = type(label) == 'table' and label.label or label
         local option = CreateOption(f, frameOptions)
         if (overLimit) then
             option:SetWidth((frameOptions.width or 200) - 20)
         else
             option:SetWidth(frameOptions.width or 200)
         end
-        option:SetOption(value, label)
+        option:SetOption(value, labelText)
         option:SetSelected(option.value == selectedValue)
         option:SetPoint('TOPLEFT',
             previous or container,
