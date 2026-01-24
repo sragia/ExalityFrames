@@ -37,6 +37,15 @@ local function CreateOption(f, frameOptions)
             else
                 valueDisplay:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
             end
+            if (f.optionData and f.optionData.isTextureDropdown and LSM) then
+                self.texture:SetTexture(LSM:Fetch('statusbar', value))
+                self.texture:SetVertexColor(0.8, 0.8, 0.8, 1)
+                self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+            else
+                self.texture:SetTexture(EXFrames.assets.textures.window.bg)
+                self.texture:SetVertexColor(0.15, 0.15, 0.15, 1)
+                self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+            end
             option.value = value
             option.valueDisplay:SetText(label)
         end
@@ -50,10 +59,13 @@ local function CreateOption(f, frameOptions)
         tex:SetAllPoints()
         option.texture = tex
         option.SetSelected = function(self, selected)
+            local isTextureDropdown = f.optionData and f.optionData.isTextureDropdown
             if (selected) then
-                option.texture:SetVertexColor(0.25, 0.25, 0.25, 1)
+                local value = isTextureDropdown and 1 or 0.25
+                option.texture:SetVertexColor(value, value, value, 1)
             else
-                option.texture:SetVertexColor(0.15, 0.15, 0.15, 1)
+                local value = isTextureDropdown and 0.8 or 0.15
+                option.texture:SetVertexColor(value, value, value, 1)
             end
         end
     end
@@ -275,6 +287,7 @@ local function ConfigureFrame(f, options)
         self:SetOptions(option.getOptions())
         self:SetValue('value', option.currentValue())
         self.frameOptions.isFontDropdown = option.isFontDropdown
+        self.frameOptions.isTextureDropdown = option.isTextureDropdown
         self.onChange = option.onChange
     end
 
