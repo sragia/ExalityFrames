@@ -19,6 +19,7 @@ end
 
 local function CreateOption(f, frameOptions)
     local option = dropdown.optionItemPool:Acquire()
+    option.optionData = f.optionData
     option:SetSize(
         frameOptions.width or 200,
         frameOptions.height and ((frameOptions.height * 0.75)) or 20
@@ -32,12 +33,12 @@ local function CreateOption(f, frameOptions)
         valueDisplay:SetWidth(0)
 
         option.SetOption = function(self, value, label)
-            if (f.optionData and f.optionData.isFontDropdown and LSM) then
+            if (self.optionData and self.optionData.isFontDropdown and LSM) then
                 valueDisplay:SetFont(LSM:Fetch('font', value), 10, 'OUTLINE')
             else
                 valueDisplay:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
             end
-            if (f.optionData and f.optionData.isTextureDropdown and LSM) then
+            if (self.optionData and self.optionData.isTextureDropdown and LSM) then
                 self.texture:SetTexture(LSM:Fetch('statusbar', value))
                 self.texture:SetVertexColor(0.8, 0.8, 0.8, 1)
                 self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
@@ -59,7 +60,7 @@ local function CreateOption(f, frameOptions)
         tex:SetAllPoints()
         option.texture = tex
         option.SetSelected = function(self, selected)
-            local isTextureDropdown = f.optionData and f.optionData.isTextureDropdown
+            local isTextureDropdown = self.optionData and self.optionData.isTextureDropdown
             if (selected) then
                 local value = isTextureDropdown and 1 or 0.25
                 option.texture:SetVertexColor(value, value, value, 1)
