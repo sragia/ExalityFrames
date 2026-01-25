@@ -83,12 +83,19 @@ local function ConfigureFrame(f)
 
     f.SetOptionData = function(self, option)
         self.optionData = option
-        self:SetText(option.label)
+        if (option.label) then
+            self:SetText(option.label)
+        else
+            self:SetText('')
+        end
         if (option.onClick) then
             self.onClick = option.onClick
         end
         if (option.color) then
             self:SetColor(unpack(option.color))
+        end
+        if (option.icon) then
+            self:SetIcon(option.icon.file, option.icon.width, option.icon.height)
         end
     end
 
