@@ -29,7 +29,9 @@ local function ConfigureFrame(f)
     descriptionText:SetFont(EXFrames.assets.font.default(), 12, 'OUTLINE')
     descriptionText:SetVertexColor(1, 1, 1, 1)
     descriptionText:SetPoint('LEFT', 5, 0)
+    descriptionText:SetPoint('RIGHT', -5, 0)
     descriptionText:SetWidth(0)
+    descriptionText:SetJustifyH('LEFT')
     f.descriptionText = descriptionText
 
     f.configured = true
