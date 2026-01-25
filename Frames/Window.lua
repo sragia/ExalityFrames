@@ -71,6 +71,14 @@ local configure = function(frame)
         EXFrames:Callback('windowClose', self.windowId)
     end
 
+    frame.HideWindowImmediate = function(self)
+        self:Hide()
+        if (self.onClose) then
+            self.onClose()
+        end
+        EXFrames:Callback('windowClose', self.windowId)
+    end
+
     if (not frame.Texture) then
         local bg = frame:CreateTexture()
         frame.Texture = bg
