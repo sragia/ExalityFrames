@@ -46,6 +46,7 @@ local function ConfigureFrame(f)
         leftButtonTexture:SetTexture(EXFrames.assets.textures.input.range.leftArrow)
     end)
     leftButton:SetScript('OnClick', function(self)
+        if ((f.value - f.step) < f.min) then return end
         f:SetValue('value', f.value - f.step)
     end)
 
@@ -64,6 +65,7 @@ local function ConfigureFrame(f)
         rightButtonTexture:SetTexture(EXFrames.assets.textures.input.range.rightArrow)
     end)
     rightButton:SetScript('OnClick', function(self)
+        if ((f.value + f.step) > f.max) then return end
         f:SetValue('value', f.value + f.step)
     end)
 

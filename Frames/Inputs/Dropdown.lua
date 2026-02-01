@@ -114,7 +114,6 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
     else
         f.optionContainer.scrollFrame:Hide()
     end
-
     for value, label in EXFrames.utils.spairs(options, function(t, a, b)
         if (type(t[a]) == 'table') then
             if (t[a].order) then
@@ -167,6 +166,9 @@ local function ConfigureFrame(f, options)
         valueDisplay:SetText(' ')
         f:Observe('value', function(value)
             local label = f.options[value] or value
+            if (type(label) == 'table') then
+                label = label.label
+            end
             valueDisplay:SetText(label ~= '' and label or ' ')
         end)
 
