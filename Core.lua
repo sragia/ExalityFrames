@@ -190,6 +190,10 @@ ns.EXFrames.utils = {
   end,
 }
 
+ns.EXFrames.ScalePixel = function(self, value)
+  return PixelUtil.GetNearestPixelSize(value, UIParent:GetScale())
+end
+
 ns.EXFrames.assets = {
   textures = {
     window = {
@@ -212,6 +216,10 @@ ns.EXFrames.assets = {
         rightArrow = BASE_PATH .. 'Assets\\Inputs\\Range\\right-arrow.png',
         rightArrowActive = BASE_PATH .. 'Assets\\Inputs\\Range\\right-arrow-active.png',
         track = BASE_PATH .. 'Assets\\Inputs\\Range\\track.png',
+      },
+      anchorPoint = {
+        active = BASE_PATH .. 'Assets\\Inputs\\Anchor\\point-active.png',
+        inactive = BASE_PATH .. 'Assets\\Inputs\\Anchor\\point-inactive.png',
       },
       checkbox = {
         base = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\base.png',
@@ -240,11 +248,12 @@ ns.EXFrames.assets = {
       edgeSize = 1,
       insets = { left = 0, right = 0, top = 0, bottom = 0 }
     },
-    pixelPerfect = function()
+    pixelPerfect = function(borderSize)
+      borderSize = borderSize or 1
       return {
         bgFile = "Interface\\BUTTONS\\WHITE8X8.blp",
         edgeFile = "Interface\\BUTTONS\\WHITE8X8.blp",
-        edgeSize = ns.EXFrames:ScalePixel(1)
+        edgeSize = ns.EXFrames:ScalePixel(borderSize)
       }
     end
   },

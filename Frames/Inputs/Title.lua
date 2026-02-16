@@ -12,7 +12,7 @@ title.Init = function(self)
 end
 
 local function ConfigureFrame(f)
-    f:SetSize(100, 30)
+    f:SetSize(100, 34)
     f.SetFrameWidth = function(self, width)
         f:SetWidth(width)
     end
@@ -21,30 +21,48 @@ local function ConfigureFrame(f)
         self.titleText:SetText(option.label)
         if (option.size) then
             self.titleText:SetFont(EXFrames.assets.font.default(), option.size, 'OUTLINE')
-            self:SetHeight(option.size + 12)
+            self:SetHeight(option.size + 16)
         else
-            self:SetHeight(30)
+            self:SetHeight(34)
             self.titleText:SetFont(EXFrames.assets.font.default(), 18, 'OUTLINE')
+        end
+
+        if (option.background) then
+            self.bg:SetVertexColor(unpack(option.background))
+        else
+            self.bg:SetVertexColor(0.15, 0.15, 0.15, 1)
+        end
+
+        if (option.accent) then
+            self.bg2:SetVertexColor(unpack(option.accent))
+        else
+            self.bg2:SetVertexColor(249 / 255, 95 / 255, 9 / 255)
         end
     end
 
     local titleText = f:CreateFontString(nil, 'OVERLAY')
     titleText:SetFont(EXFrames.assets.font.default(), 18, 'OUTLINE')
-    titleText:SetVertexColor(1, 1, 1, 1)
-    titleText:SetShadowOffset(2, -2)
-    titleText:SetShadowColor(249 / 255, 95 / 255, 9 / 255, 1)
+    titleText:SetVertexColor(1, 1, 1)
     titleText:SetPoint('LEFT', 5, 0)
     titleText:SetWidth(0)
     f.titleText = titleText
 
-    local bg = f:CreateTexture(nil, 'BACKGROUND')
+    local bg = f:CreateTexture(nil, 'ARTWORK')
     bg:SetTexture(EXFrames.assets.textures.titleBg)
-    bg:SetVertexColor(1, 1, 1, 0.2)
-    bg:SetTextureSliceMargins(20, 20, 20, 20)
+    bg:SetVertexColor(0.15, 0.15, 0.15, 1)
+    bg:SetTextureSliceMargins(15, 15, 15, 15)
     bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg:SetPoint('TOPLEFT')
-    bg:SetPoint('BOTTOMLEFT', 100, 0)
+    bg:SetAllPoints()
     f.bg = bg
+
+    local bg2 = f:CreateTexture(nil, 'BACKGROUND')
+    bg2:SetTexture(EXFrames.assets.textures.titleBg)
+    bg2:SetVertexColor(249 / 255, 95 / 255, 9 / 255)
+    bg2:SetTextureSliceMargins(15, 15, 15, 15)
+    bg2:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    bg2:SetPoint('TOPLEFT', bg, 'TOPLEFT', 2, -2)
+    bg2:SetPoint('BOTTOMRIGHT', bg, 'BOTTOMRIGHT', 2, -2)
+    f.bg2 = bg2
 
     f.configured = true
 end
