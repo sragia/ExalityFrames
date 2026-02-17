@@ -19,6 +19,7 @@
   <Script file="Frames/Inputs/SlimDropdown.lua" />
   <Script file="Frames/Inputs/AnchorPoint.lua" />
   <Script file="Frames/OptionFrames/ModuleItem.lua" />
+  <Script file="Frames/OptionFrames/MenuItem.lua" />
   <Script file="Frames/Dialog.lua" />
   <Script file="Frames/SplitOptions.lua" />
   <Script file="Frames/Tabs.lua" />
