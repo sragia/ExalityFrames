@@ -7,7 +7,8 @@ local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
 ---@class ExalityFramesScrollFrame
 local scrollFrame = EXFrames:GetFrame('scroll-frame')
 
----@class DropdownOptions : {initial: string, onChange: function, options: table, label: string, width?: number, height?: number}
+---@class DropdownOptionEntry : string|{label: string, icon?: string|{texture: string, width?: number, height?: number, imageSize?: {w: number, h: number}}, order?: number}
+---@class DropdownOptions : {initial: string, onChange: function, options: table<string|number, DropdownOptionEntry>, label: string, width?: number, height?: number}
 
 ---@class ExalityFramesDropdownInput
 local dropdown = EXFrames:GetFrame('dropdown')
@@ -15,6 +16,73 @@ local dropdown = EXFrames:GetFrame('dropdown')
 dropdown.Init = function(self)
     self.pool = CreateFramePool('Frame', UIParent)
     self.optionItemPool = CreateFramePool('Frame', UIParent)
+end
+
+local DEFAULT_ICON_SIZE = 20
+
+local function GetCenterSquareTexCoord(imageSize)
+    if not imageSize then
+        return 0, 1, 0, 1
+    end
+    local w = imageSize.w or imageSize.width
+    local h = imageSize.h or imageSize.height
+    if not w or not h or w <= 0 or h <= 0 then
+        return 0, 1, 0, 1
+    end
+    if w > h then
+        local inset = (1 - h / w) / 2
+        return inset, 1 - inset, 0, 1
+    elseif h > w then
+        local inset = (1 - w / h) / 2
+        return 0, 1, inset, 1 - inset
+    end
+    return 0, 1, 0, 1
+end
+
+local function GetOptionDisplay(optionValue)
+    if type(optionValue) == 'table' then
+        return optionValue.label, optionValue.icon
+    end
+    return optionValue, nil
+end
+
+local function ApplyIcon(textureFrame, icon)
+    if not textureFrame then
+        return
+    end
+    if icon then
+        local tex, width, height, imageSize
+        if type(icon) == 'table' then
+            tex = icon.texture or icon.file
+            width = icon.width or DEFAULT_ICON_SIZE
+            height = icon.height or DEFAULT_ICON_SIZE
+            imageSize = icon.imageSize
+        else
+            tex = icon
+            width = DEFAULT_ICON_SIZE
+            height = DEFAULT_ICON_SIZE
+        end
+        textureFrame:SetTexture(tex)
+        local left, right, top, bottom = GetCenterSquareTexCoord(imageSize)
+        textureFrame:SetTexCoord(left, right, top, bottom)
+        textureFrame:SetSize(width, height)
+        textureFrame:Show()
+    else
+        textureFrame:SetTexture(nil)
+        textureFrame:SetTexCoord(0, 1, 0, 1)
+        textureFrame:SetSize(0, 0)
+        textureFrame:Hide()
+    end
+end
+
+local function UpdateValueDisplayLayout(valueDisplay, valueIcon, icon, yOffset)
+    ApplyIcon(valueIcon, icon)
+    valueDisplay:ClearAllPoints()
+    if icon then
+        valueDisplay:SetPoint('LEFT', valueIcon, 'RIGHT', 4, 0)
+    else
+        valueDisplay:SetPoint('LEFT', 10, yOffset or 0)
+    end
 end
 
 local function CreateOption(f, frameOptions)
@@ -29,10 +97,24 @@ local function CreateOption(f, frameOptions)
         local valueDisplay = option:CreateFontString(nil, 'OVERLAY')
         option.valueDisplay = valueDisplay
         valueDisplay:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
-        valueDisplay:SetPoint('LEFT', 10, 0)
         valueDisplay:SetWidth(0)
 
-        option.SetOption = function(self, value, label)
+        local valueIcon = option:CreateTexture(nil, 'OVERLAY')
+        valueIcon:SetPoint('LEFT', 10, 0)
+        valueIcon:SetSize(0, 0)
+        valueIcon:Hide()
+        option.valueIcon = valueIcon
+
+        local tex = option:CreateTexture(nil, 'BACKGROUND')
+        tex:SetTexture(EXFrames.assets.textures.window.bg)
+        tex:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
+        tex:SetTextureSliceMargins(15, 15, 15, 15)
+        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+        tex:SetVertexColor(0.15, 0.15, 0.15, 1)
+        tex:SetAllPoints()
+        option.texture = tex
+
+        option.SetOption = function(self, value, label, icon)
             if (self.optionData and self.optionData.isFontDropdown and LSM) then
                 valueDisplay:SetFont(LSM:Fetch('font', value), 10, 'OUTLINE')
             else
@@ -48,17 +130,9 @@ local function CreateOption(f, frameOptions)
                 self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
             end
             option.value = value
-            option.valueDisplay:SetText(label)
+            UpdateValueDisplayLayout(valueDisplay, option.valueIcon, icon)
+            option.valueDisplay:SetText(label or '')
         end
-
-        local tex = option:CreateTexture(nil, 'BACKGROUND')
-        tex:SetTexture(EXFrames.assets.textures.window.bg)
-        tex:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
-        tex:SetTextureSliceMargins(15, 15, 15, 15)
-        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-        tex:SetVertexColor(0.15, 0.15, 0.15, 1)
-        tex:SetAllPoints()
-        option.texture = tex
         option.SetSelected = function(self, selected)
             local isTextureDropdown = self.optionData and self.optionData.isTextureDropdown
             if (selected) then
@@ -100,11 +174,20 @@ local function CreateOption(f, frameOptions)
     return option
 end
 
+local function GetDropdownWidth(f, frameOptions)
+    local width = f:GetWidth()
+    if width and width > 0 then
+        return width
+    end
+    return frameOptions.width or 200
+end
+
 local function PopulateOptions(f, options, frameOptions, selectedValue)
     dropdown.optionItemPool:ReleaseAll()
     local previous
     local optionsNum = CountTable(options)
     local count = min(optionsNum, 10) -- Limit to 10 options to be visible
+    local dropdownWidth = GetDropdownWidth(f, frameOptions)
 
     local container = f.optionContainer
     local overLimit = optionsNum > 10
@@ -115,22 +198,31 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
         f.optionContainer.scrollFrame:Hide()
     end
     for value, label in EXFrames.utils.spairs(options, function(t, a, b)
-        if (type(t[a]) == 'table') then
-            if (t[a].order) then
+        if (type(t[a]) == 'table' and type(t[b]) == 'table') then
+            if (t[a].order and t[b].order) then
                 return t[a].order < t[b].order
             end
-            return t[a].label < t[b].label
+            if (t[a].order) then
+                return true
+            end
+            if (t[b].order) then
+                return false
+            end
+            return (t[a].label or '') < (t[b].label or '')
         end
         return t[a] < t[b]
     end) do
-        local labelText = type(label) == 'table' and label.label or label
+        local labelText, icon = GetOptionDisplay(label)
+        if not labelText then
+            labelText = type(value) == 'string' and value or tostring(value)
+        end
         local option = CreateOption(f, frameOptions)
         if (overLimit) then
-            option:SetWidth((frameOptions.width or 200) - 20)
+            option:SetWidth(dropdownWidth - 20)
         else
-            option:SetWidth(frameOptions.width or 200)
+            option:SetWidth(dropdownWidth)
         end
-        option:SetOption(value, labelText)
+        option:SetOption(value, labelText, icon)
         option:SetSelected(option.value == selectedValue)
         option:SetPoint('TOPLEFT',
             previous or container,
@@ -161,14 +253,19 @@ local function ConfigureFrame(f, options)
         local valueDisplay = f:CreateFontString(nil, 'OVERLAY')
         f.valueDisplay = valueDisplay
         valueDisplay:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
-        valueDisplay:SetPoint('LEFT', 10, -6)
         valueDisplay:SetWidth(0)
         valueDisplay:SetText(' ')
+
+        local valueIcon = f:CreateTexture(nil, 'OVERLAY')
+        valueIcon:SetPoint('LEFT', 10, -6)
+        valueIcon:SetSize(0, 0)
+        valueIcon:Hide()
+        f.valueIcon = valueIcon
+
         f:Observe('value', function(value)
-            local label = f.options[value] or value
-            if (type(label) == 'table') then
-                label = label.label
-            end
+            local optionValue = f.options[value] or value
+            local label, icon = GetOptionDisplay(optionValue)
+            UpdateValueDisplayLayout(valueDisplay, f.valueIcon, icon, -6)
             valueDisplay:SetText(label ~= '' and label or ' ')
         end)
 
@@ -233,7 +330,7 @@ local function ConfigureFrame(f, options)
     if (not f.label) then
         local textFrame = f:CreateFontString(nil, 'OVERLAY')
         textFrame:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
-        textFrame:SetPoint('BOTTOMLEFT', f.valueDisplay, 'TOPLEFT', -10, 12)
+        textFrame:SetPoint('BOTTOMLEFT', f.texture, 'TOPLEFT', 0, 2)
         textFrame:SetWidth(0)
         f.label = textFrame
         textFrame:SetText(options.label or '')
