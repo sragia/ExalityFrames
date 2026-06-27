@@ -80,20 +80,31 @@ local configure = function(frame)
     end
 
     if (not frame.Texture) then
-        local bg = frame:CreateTexture()
+        local th = EXFrames.Theme
+
+        local bg = frame:CreateTexture(nil, 'BACKGROUND')
         frame.Texture = bg
-        bg:SetTexture(EXFrames.assets.textures.window.bg)
-        bg:SetVertexColor(0, 0, 0, 0.8)
-        bg:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
-        bg:SetTextureSliceMargins(15, 15, 15, 15)
+        bg:SetTexture(EXFrames.assets.textures.ui.panelBg)
+        bg:SetVertexColor(unpack(th.backgroundDeep))
+        bg:SetTextureSliceMargins(8, 8, 8, 8)
         bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
         bg:SetAllPoints()
+
+        -- Border overlay: swap panelBorder from WHITE8X8 to a proper rounded PNG when ready
+        local borderOverlay = frame:CreateTexture(nil, 'OVERLAY', nil, 7)
+        borderOverlay:SetTexture(EXFrames.assets.textures.ui.panelBorder)
+        borderOverlay:SetVertexColor(unpack(th.border))
+        borderOverlay:SetTextureSliceMargins(8, 8, 8, 8)
+        borderOverlay:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+        borderOverlay:SetAllPoints()
+        borderOverlay:SetAlpha(0)  -- invisible until proper border PNG is provided
+        frame.borderOverlay = borderOverlay
     end
 
     if (not frame.logo) then
         local logo = CreateFrame('Frame', nil, frame)
         logo:SetSize(25, 25)
-        logo:SetPoint('LEFT', frame, 'TOPLEFT', 10, 0)
+        logo:SetPoint('LEFT', frame, 'TOPLEFT', 10, -20)
 
         local texture = logo:CreateTexture(nil, 'OVERLAY')
         texture:SetTexture(EXFrames.config.logoPath)
@@ -129,22 +140,25 @@ local configure = function(frame)
     end
 
     if (not frame.close) then
+        local th = EXFrames.Theme
+        local sw = EXFrames.assets.textures.solidWhite
+
         local closeContainer = CreateFrame("Button", nil, frame)
         closeContainer:SetSize(38, 28)
-        closeContainer:SetPoint("TOPRIGHT", -8, -5)
+        closeContainer:SetPoint("TOPRIGHT", -8, -6)
 
         local texture = closeContainer:CreateTexture(nil, "BACKGROUND")
-        texture:SetTexture(EXFrames.assets.textures.input.buttonBg)
-        texture:SetTextureSliceMargins(20, 20, 20, 20)
+        texture:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+        texture:SetTextureSliceMargins(31, 31, 31, 31)
         texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-        texture:SetVertexColor(110 / 255, 4 / 255, 0, 1)
+        texture:SetVertexColor(unpack(th.faded))
         texture:SetAllPoints()
 
         local closeIcon = closeContainer:CreateTexture(nil, "OVERLAY")
         closeIcon:SetTexture(EXFrames.assets.textures.icon.close)
         closeIcon:SetVertexColor(1, 1, 1, 1)
         closeIcon:SetPoint("CENTER")
-        closeIcon:SetSize(10, 10)
+        closeIcon:SetSize(16, 16)
 
         closeContainer:EnableMouse(true)
         closeContainer:SetMouseClickEnabled()
@@ -154,10 +168,10 @@ local configure = function(frame)
             end
         end)
         closeContainer:SetScript("OnEnter", function(_)
-            texture:SetVertexColor(186 / 255, 6 / 255, 0, 1)
+            texture:SetVertexColor(unpack(th.dangerHover))
         end)
         closeContainer:SetScript("OnLeave", function(_)
-            texture:SetVertexColor(110 / 255, 4 / 255, 0, 1)
+            texture:SetVertexColor(unpack(th.faded))
         end)
 
         frame.close = closeContainer
@@ -169,14 +183,14 @@ local configure = function(frame)
         frame.timerContainer:SetPoint('BOTTOMLEFT', frame, 'BOTTOMLEFT', 20, 15)
         frame.timerContainer:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', -20, 15)
         local timerBg = frame.timerContainer:CreateTexture(nil, "BACKGROUND")
-        timerBg:SetTexture(EXFrames.assets.textures.statusBar)
-        timerBg:SetVertexColor(0, 0, 0, 1)
+        timerBg:SetTexture(EXFrames.assets.textures.solidWhite)
+        timerBg:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
         timerBg:SetAllPoints()
 
         frame.timer = CreateFrame("StatusBar", nil, frame.timerContainer)
         frame.timer:SetAllPoints()
-        frame.timer:SetStatusBarTexture(EXFrames.assets.textures.statusBar)
-        frame.timer:SetStatusBarColor(194 / 255, 2 / 255, 37 / 255, 1)
+        frame.timer:SetStatusBarTexture(EXFrames.assets.textures.solidWhite)
+        frame.timer:SetStatusBarColor(unpack(EXFrames.Theme.accent))
         frame.timer:SetMinMaxValues(0, 1)
         frame.timer:SetValue(0)
         frame.timerContainer:Hide();
@@ -184,9 +198,9 @@ local configure = function(frame)
 
     local title = frame:CreateFontString(nil, "OVERLAY")
     frame.title = title
-    title:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
+    title:SetFont(EXFrames.assets.font.default(), 12, 'OUTLINE')
     title:SetTextColor(1, 1, 1)
-    title:SetPoint('CENTER', frame, 'TOP')
+    title:SetPoint('CENTER', frame, 'TOP', 0, -20)
     title:SetText(addonName)
 
     frame.SetTitle = function(self, title)
@@ -196,7 +210,7 @@ local configure = function(frame)
     if not frame.container then
         local container = CreateFrame("Frame", nil, frame)
         frame.container = container
-        container:SetPoint("TOPLEFT", 15, -50)
+        container:SetPoint("TOPLEFT", 15, -42)
         container:SetPoint("BOTTOMRIGHT", -15, 15)
     end
 

@@ -10,6 +10,34 @@ ns.EXFrames.frames = {}
 
 ns.EXFrames.config = {}
 
+-- Color palette. Override per-project with EXFrames:SetTheme().
+ns.EXFrames.Theme = {
+  white           = { 237 / 255, 237 / 255, 237 / 255, 1 }, -- #ededed
+  backgroundLight = { 36 / 255, 31 / 255, 32 / 255, 1 },    -- #332b2d
+  background      = { 25 / 255, 21 / 255, 22 / 255, 1 },    -- #191516  main window bg
+  backgroundDeep  = { 0.059, 0.059, 0.059, 1 },             -- #0f0f0f  deepest dark
+  backgroundPanel = { 40 / 255, 34 / 255, 35 / 255, 0.4 },  -- #282223  panels / header
+  accent          = { 0.671, 0.137, 0.275, 1 },             -- #AB2346
+  accentLight     = { 0.906, 0.200, 0.380, 1 },             -- #e73361
+  border          = { 0.161, 0.133, 0.141, 1 },             -- #292224
+  borderActive    = { 245 / 255, 7 / 255, 68 / 255, 1 },    -- #f50744  selected border
+  text            = { 0.933, 0.933, 0.933, 1 },             -- #EEEEEE
+  textMuted       = { 0.357, 0.384, 0.431, 1 },             -- #5b626e
+  danger          = { 0.502, 0.067, 0.000, 1 },             -- close / destructive
+  dangerHover     = { 0.671, 0.090, 0.000, 1 },
+  success         = { 0.173, 0.569, 0.000, 1 },
+  successDark     = { 0.125, 0.412, 0.000, 1 },
+  inProgress      = { 242 / 255, 109 / 255, 0, 1 }, -- #f26d00
+  faded           = { 1, 1, 1, 0.05 },
+  gray            = { 74 / 255, 61 / 255, 65 / 255, 1 }, -- #4a3d41
+}
+
+ns.EXFrames.SetTheme = function(self, overrides)
+  for k, v in pairs(overrides) do
+    self.Theme[k] = v
+  end
+end
+
 ns.EXFrames.GetFrame = function(self, id)
   if (not self.frames[id]) then
     initIndx = initIndx + 1
@@ -196,6 +224,21 @@ end
 
 ns.EXFrames.assets = {
   textures = {
+    solidWhite = "Interface\\Buttons\\WHITE8X8.blp",
+
+    -- Swap these for proper 9-slice PNGs when ready. See TEXTURE_GUIDE.md.
+    ui = {
+      panelBg        = BASE_PATH .. "Assets\\UI\\panel-bg.png",         -- fill,   margins 20
+      panelBorder    = BASE_PATH .. "Assets\\UI\\panel-border.png",     -- border, margins 20
+      buttonBg       = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 31
+      inputBg        = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 40
+      inputBorder    = BASE_PATH .. "Assets\\UI\\input-border.png",     -- border, margins 40
+      menuItemBg     = BASE_PATH .. "Assets\\UI\\menu-item-bg.png",     -- fill,   margins 6
+      menuItemBorder = BASE_PATH .. "Assets\\UI\\menu-item-border.png", -- border, margins 6
+      tabActive      = "Interface\\Buttons\\WHITE8X8.blp",              -- margins 12
+      tabInactive    = "Interface\\Buttons\\WHITE8X8.blp",              -- margins 12
+    },
+
     window = {
       bg = BASE_PATH .. 'Assets\\Window\\bg',
       resizeBtn = BASE_PATH .. 'Assets\\Window\\resize-btn',

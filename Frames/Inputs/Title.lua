@@ -36,7 +36,7 @@ local function ConfigureFrame(f)
         if (option.accent) then
             self.bg2:SetVertexColor(unpack(option.accent))
         else
-            self.bg2:SetVertexColor(249 / 255, 95 / 255, 9 / 255)
+            self.bg2:SetVertexColor(unpack(EXFrames.Theme.accent))
         end
     end
 
@@ -48,18 +48,18 @@ local function ConfigureFrame(f)
     f.titleText = titleText
 
     local bg = f:CreateTexture(nil, 'ARTWORK')
-    bg:SetTexture(EXFrames.assets.textures.titleBg)
-    bg:SetVertexColor(0.15, 0.15, 0.15, 1)
-    bg:SetTextureSliceMargins(15, 15, 15, 15)
-    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    bg:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+    bg:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
+    bg:SetTextureSliceMargins(6, 6, 6, 6)
+    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     bg:SetAllPoints()
     f.bg = bg
 
     local bg2 = f:CreateTexture(nil, 'BACKGROUND')
-    bg2:SetTexture(EXFrames.assets.textures.titleBg)
-    bg2:SetVertexColor(249 / 255, 95 / 255, 9 / 255)
-    bg2:SetTextureSliceMargins(15, 15, 15, 15)
-    bg2:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    bg2:SetTexture(EXFrames.assets.textures.ui.panelBg)
+    bg2:SetTextureSliceMargins(20, 20, 20, 20)
+    bg2:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+    bg2:SetVertexColor(unpack(EXFrames.Theme.accent))
     bg2:SetPoint('TOPLEFT', bg, 'TOPLEFT', 2, -2)
     bg2:SetPoint('BOTTOMRIGHT', bg, 'BOTTOMRIGHT', 2, -2)
     f.bg2 = bg2

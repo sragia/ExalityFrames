@@ -14,42 +14,52 @@ menuItem.Init = function(self)
 end
 
 local function StyleButton(f, isMain)
+    local th = EXFrames.Theme
+
     local bg = f:CreateTexture(nil, 'BACKGROUND', nil, 1)
-    bg:SetTexture(EXFrames.assets.textures.menuItem.bg)
-    bg:SetTextureSliceMargins(10, 10, 10, 10)
+    bg:SetTexture(EXFrames.assets.textures.ui.menuItemBg)
+    bg:SetVertexColor(unpack(th.backgroundDeep))
+    bg:SetTextureSliceMargins(6, 6, 6, 6)
     bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg:SetVertexColor(0.05, 0.05, 0.05, 1)
     bg:SetAllPoints()
     f.bg = bg
 
     local bg2 = f:CreateTexture(nil, 'BACKGROUND', nil, 0)
-    bg2:SetTexture(EXFrames.assets.textures.menuItem.bg)
-    bg2:SetTextureSliceMargins(10, 10, 10, 10)
+    bg2:SetTexture(EXFrames.assets.textures.ui.menuItemBg)
+    bg2:SetVertexColor(unpack(th.accent))
+    bg2:SetTextureSliceMargins(27, 27, 27, 27)
     bg2:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg2:SetVertexColor(249 / 255, 95 / 255, 9 / 255)
     bg2:SetAllPoints()
     f.bg2 = bg2
     bg2:Hide()
 
+    local borderOverlay = f:CreateTexture(nil, 'OVERLAY', nil, 1)
+    borderOverlay:SetTexture(EXFrames.assets.textures.ui.menuItemBorder)
+    borderOverlay:SetVertexColor(unpack(th.border))
+    borderOverlay:SetTextureSliceMargins(6, 6, 6, 6)
+    borderOverlay:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    borderOverlay:SetPoint('TOPLEFT', bg, 'TOPLEFT')
+    borderOverlay:SetPoint('BOTTOMRIGHT', bg, 'BOTTOMRIGHT')
+
     local border = f:CreateTexture(nil, 'ARTWORK')
     border:SetTexture(EXFrames.assets.textures.menuItem.border)
-    border:SetTextureSliceMargins(10, 10, 0, 10)
+    border:SetTextureSliceMargins(6, 6, 0, 6)
     border:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    border:SetVertexColor(0.6, 0.6, 0.6, 1)
+    border:SetVertexColor(unpack(th.border))
     border:SetPoint('TOPLEFT', bg, 'TOPLEFT')
     border:SetPoint('BOTTOM', bg, 'BOTTOM')
-    border:SetWidth(7)
+    border:SetWidth(5)
     f.border = border
 
     local glow = f:CreateTexture(nil, 'BORDER')
     glow:SetTexture(EXFrames.assets.textures.menuItem.glow)
+    glow:SetVertexColor(unpack(th.accent))
     glow:SetTextureSliceMargins(10, 10, 10, 10)
     glow:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    glow:SetVertexColor(249 / 255, 95 / 255, 9 / 255, 1)
     glow:SetPoint('TOPLEFT', bg, 'TOPLEFT')
     glow:SetPoint('BOTTOM', bg, 'BOTTOM')
-    glow:SetWidth(50)
-    glow:SetAlpha(0)
+    glow:SetWidth(60)
+    glow:Hide()
     f.glow = glow
 
     local text = f:CreateFontString(nil, 'OVERLAY')
@@ -67,10 +77,8 @@ local function StyleButton(f, isMain)
         expand:SetPoint('RIGHT', bg, 'RIGHT', -10, 0)
 
         local expandBg = expand:CreateTexture(nil, 'BACKGROUND')
-        expandBg:SetTexture(EXFrames.assets.textures.menuItem.expandBg)
-        expandBg:SetTextureSliceMargins(10, 10, 10, 10)
-        expandBg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-        expandBg:SetVertexColor(1, 1, 1, 1)
+        expandBg:SetTexture(EXFrames.assets.textures.solidWhite)
+        expandBg:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
         expandBg:SetAllPoints()
         expand.bg = expandBg
 
@@ -124,6 +132,8 @@ local function ConfigureFrame(f)
         if (self.__owner.isExpandable) then
             self.__owner:SetValue('isExpanded', not self.__owner.isExpanded)
         end
+
+        EXFrames:Callback('menuItemClick')
     end)
 
     f.SetText = function(self, text)
@@ -160,16 +170,15 @@ local function ConfigureFrame(f)
         subButton.onClick = nil
         subButton.isSelected = false
 
-        subButton.bg:SetVertexColor(0.15, 0.15, 0.15, 1)
-
+        subButton.bg:SetVertexColor(unpack(EXFrames.Theme.backgroundLight))
 
         subButton:Observe('isSelected', function(selected, _, _, self)
             if (selected) then
-                self.glow:SetAlpha(1)
-                self.border:SetVertexColor(1, 186 / 255, 0, 1)
+                self.glow:Show()
+                self.border:SetVertexColor(unpack(EXFrames.Theme.borderActive))
             else
-                self.glow:SetAlpha(0)
-                self.border:SetVertexColor(0.6, 0.6, 0.6, 1)
+                self.glow:Hide()
+                self.border:SetVertexColor(unpack(EXFrames.Theme.border))
             end
         end)
 
@@ -177,6 +186,7 @@ local function ConfigureFrame(f)
             if (self.onClick) then
                 self:onClick()
             end
+            EXFrames:Callback('menuItemClick')
         end)
 
         return subButton
@@ -223,11 +233,11 @@ local function ConfigureFrame(f)
 
     f:Observe('isSelected', function(selected, _, _, self)
         if (selected) then
-            self.main.glow:SetAlpha(1)
-            self.main.border:SetVertexColor(1, 186 / 255, 0, 1)
+            self.main.glow:Show()
+            self.main.border:SetVertexColor(unpack(EXFrames.Theme.borderActive))
         else
-            self.main.glow:SetAlpha(0)
-            self.main.border:SetVertexColor(0.6, 0.6, 0.6, 1)
+            self.main.glow:Hide()
+            self.main.border:SetVertexColor(unpack(EXFrames.Theme.border))
         end
     end)
 

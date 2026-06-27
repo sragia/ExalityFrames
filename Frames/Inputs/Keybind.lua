@@ -80,6 +80,15 @@ local SetupKeyListening = function(f)
         if (self.newKey) then
             f:SetIsActive()
             f:SetKeybind(self.newKey)
+        else
+            local label = f.keybind:GetText()
+            if label == 'Not Bound' then
+                f:SetInactive()
+            elseif label == 'Unbound' then
+                f:UnsetKeybind()
+            else
+                f:SetIsActive()
+            end
         end
     end
 
@@ -91,18 +100,19 @@ end
 local SetupFrame = function(f)
     EXFrames.utils.addObserver(f)
     f:SetSize(150, 35)
-
+    f.isActive = false
 
     local bg = f:CreateTexture(nil, 'BACKGROUND')
-    bg:SetTexture(EXFrames.assets.textures.input.buttonBg)
+    bg:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+    bg:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
     bg:SetTextureSliceMargins(10, 10, 10, 10)
-    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg:SetVertexColor(0, 0, 0, 1)
+    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     bg:SetAllPoints()
     f.bg = bg
 
     local keybind = f:CreateFontString(nil, 'OVERLAY')
-    keybind:SetFont(EXFrames.assets.font.default(), 13, 'OUTLINE')
+    keybind:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
+    keybind:SetTextColor(unpack(EXFrames.Theme.textMuted))
     keybind:SetPoint('CENTER')
     keybind:SetWidth(0)
     f.keybind = keybind
@@ -112,24 +122,23 @@ local SetupFrame = function(f)
         self.keybind:SetText(keybind)
     end
 
-    local hover = CreateFrame('Frame', nil, f)
-    hover:SetAllPoints()
-    local hoverTexture = hover:CreateTexture(nil, 'BACKGROUND')
-    hoverTexture:SetTexture(EXFrames.assets.textures.input.buttonHover)
-    hoverTexture:SetTextureSliceMargins(25, 25, 25, 25)
-    hoverTexture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    hoverTexture:SetVertexColor(1, 1, 1, 1)
-    hoverTexture:SetAllPoints()
-    hover:SetAlpha(0)
-    f.hoverTexture = hoverTexture
+    local hoverTex = f:CreateTexture(nil, 'BORDER')
+    hoverTex:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+    hoverTex:SetVertexColor(unpack(EXFrames.Theme.accentLight))
+    hoverTex:SetTextureSliceMargins(6, 6, 6, 6)
+    hoverTex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+    hoverTex:SetAllPoints()
+    hoverTex:SetAlpha(0)
+    f.hoverTex = hoverTex
 
-    local onHover = EXFrames.utils.animation.fade(hover, 0.1, 0, 1)
-    local onLeave = EXFrames.utils.animation.fade(hover, 0.1, 1, 0)
+    local onHover = EXFrames.utils.animation.fade(hoverTex, 0.1, 0, 1)
+    local onLeave = EXFrames.utils.animation.fade(hoverTex, 0.1, 1, 0)
     f.onHover = onHover
     f.onLeave = onLeave
 
     f:SetScript('OnEnter', function(self)
         if (not self.isListening) then
+            self.keybind:SetTextColor(unpack(EXFrames.Theme.text))
             onHover:Play()
         end
     end)
@@ -137,29 +146,41 @@ local SetupFrame = function(f)
     f:SetScript('OnLeave', function(self)
         if (not self.isListening) then
             onLeave:Play()
+            if (self.isActive) then
+                self.keybind:SetTextColor(unpack(EXFrames.Theme.text))
+            else
+                self.keybind:SetTextColor(unpack(EXFrames.Theme.textMuted))
+            end
         end
     end)
 
     f.SetIsListening = function(self)
-        self.hoverTexture:SetVertexColor(199 / 255, 166 / 255, 0, 1)
+        self.bg:SetVertexColor(unpack(EXFrames.Theme.inProgress))
+        self.keybind:SetTextColor(unpack(EXFrames.Theme.text))
+        self.hoverTex:SetAlpha(0)
         f.isListening = true
     end
 
     f.SetInactive = function(self)
+        self.isActive = false
         self:SetKeybind('Not Bound')
-        self.bg:SetVertexColor(66 / 255, 0, 10 / 255, 1)
+        self.bg:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
+        self.keybind:SetTextColor(unpack(EXFrames.Theme.textMuted))
     end
 
     f.SetIsActive = function(self)
-        self.bg:SetVertexColor(0, 66 / 255, 31 / 255, 1)
+        self.isActive = true
+        self.bg:SetVertexColor(unpack(EXFrames.Theme.accent))
+        self.keybind:SetTextColor(unpack(EXFrames.Theme.text))
     end
 
     f.UnsetKeybind = function(self)
         self:SetKeybind('Unbound')
+        self.bg:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
+        self.keybind:SetTextColor(unpack(EXFrames.Theme.textMuted))
     end
 
     f.Reset = function(self)
-        self.hoverTexture:SetVertexColor(1, 1, 1, 1)
         self.isListening = false
         if (not self:IsMouseOver()) then
             onLeave:Play()
@@ -172,7 +193,8 @@ local SetupFrame = function(f)
     nameFrame:SetSize(1, 1)
     nameFrame:SetFrameLevel(f:GetFrameLevel() + 2)
     local name = nameFrame:CreateFontString(nil, 'OVERLAY')
-    name:SetFont(EXFrames.assets.font.default(), 12, 'OUTLINE')
+    name:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
+    name:SetTextColor(unpack(EXFrames.Theme.text))
     name:SetPoint('LEFT')
     name:SetWidth(0)
     f.name = name

@@ -34,7 +34,7 @@ local function CreateOption(f, frameOptions)
         local tex = option:CreateTexture(nil, 'BACKGROUND')
         tex:SetTexture(EXFrames.assets.textures.window.bg)
         tex:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
-        tex:SetTextureSliceMargins(15, 15, 15, 15)
+        tex:SetTextureSliceMargins(6, 6, 6, 6)
         tex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
         tex:SetVertexColor(0.15, 0.15, 0.15, 1)
         tex:SetAllPoints()
@@ -135,7 +135,7 @@ local function ConfigureFrame(f, options)
         local tex = f:CreateTexture(nil, 'BACKGROUND')
         tex:SetTexture(EXFrames.assets.textures.window.bg)
         tex:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
-        tex:SetTextureSliceMargins(15, 15, 15, 15)
+        tex:SetTextureSliceMargins(6, 6, 6, 6)
         tex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
         tex:SetVertexColor(0.25, 0.25, 0.25, 0.6)
         tex:SetAllPoints()
@@ -206,13 +206,13 @@ local function ConfigureFrame(f, options)
                 f:SetValue('isOpen', false) -- Close dropdown if other has closed it
             end
         end
-        if (event == 'windowClose') then
-            f:SetValue('isOpen', false) -- Close Dropdown if window is closed
+        if (event == 'windowClose' or event == 'menuItemClick') then
+            f:SetValue('isOpen', false)
         end
     end
 
     EXFrames:RegisterCallback({
-        events = { 'dropdownOpen', 'windowClose' },
+        events = { 'dropdownOpen', 'windowClose', 'menuItemClick' },
         func = handleDropdownEvent
     })
 end

@@ -13,12 +13,20 @@ end
 
 local function Configure(f)
     local bg = f:CreateTexture(nil, 'BACKGROUND')
-    bg:SetTexture(EXFrames.assets.textures.input.buttonBg)
-    bg:SetTextureSliceMargins(10, 10, 10, 10)
-    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg:SetVertexColor(1, 1, 1, 0.2)
+    bg:SetTexture(EXFrames.assets.textures.ui.panelBg)
+    bg:SetVertexColor(unpack(EXFrames.Theme.backgroundLight))
+    bg:SetTextureSliceMargins(8, 8, 8, 8)
+    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     bg:SetAllPoints()
     f.bg = bg
+
+    local border = f:CreateTexture(nil, 'OVERLAY', nil, 1)
+    border:SetTexture(EXFrames.assets.textures.ui.panelBorder)
+    border:SetVertexColor(unpack(EXFrames.Theme.border))
+    border:SetTextureSliceMargins(8, 8, 8, 8)
+    border:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+    border:SetAllPoints()
+    f.border = border
 
     local name = f:CreateFontString(nil, 'OVERLAY')
     name:SetFont(EXFrames.assets.font.default(), 12, 'OUTLINE')

@@ -28,10 +28,10 @@ local function ConfigureFrame(f)
     f.icon = icon
 
     local bg = f:CreateTexture(nil, 'BACKGROUND')
-    bg:SetTexture(EXFrames.assets.textures.input.buttonBg)
+    bg:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+    bg:SetVertexColor(unpack(EXFrames.Theme.accent))
     bg:SetTextureSliceMargins(10, 10, 10, 10)
-    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg:SetVertexColor(148 / 255, 244 / 255, 1, 1)
+    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     bg:SetAllPoints()
     f.bg = bg
 
@@ -39,18 +39,18 @@ local function ConfigureFrame(f)
         self.bg:SetVertexColor(r, g, b, a)
     end
 
-    local hover = CreateFrame('Frame', nil, f)
-    hover:SetAllPoints()
-    local hoverTexture = hover:CreateTexture(nil, 'BACKGROUND')
-    hoverTexture:SetTexture(EXFrames.assets.textures.input.buttonHover)
-    hoverTexture:SetTextureSliceMargins(25, 25, 25, 25)
-    hoverTexture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    hoverTexture:SetVertexColor(1, 1, 1, 1)
-    hoverTexture:SetAllPoints()
-    hover:SetAlpha(0)
+    -- Hover in BORDER layer so it stays below the OVERLAY text
+    local hoverTex = f:CreateTexture(nil, 'BORDER')
+    hoverTex:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+    hoverTex:SetVertexColor(unpack(EXFrames.Theme.accentLight))
+    hoverTex:SetTextureSliceMargins(6, 6, 6, 6)
+    hoverTex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+    hoverTex:SetAllPoints()
+    hoverTex:SetAlpha(0)
+    f.hoverTex = hoverTex
 
-    local onHover = EXFrames.utils.animation.fade(hover, 0.1, 0, 1)
-    local onLeave = EXFrames.utils.animation.fade(hover, 0.1, 1, 0)
+    local onHover = EXFrames.utils.animation.fade(hoverTex, 0.1, 0, 1)
+    local onLeave = EXFrames.utils.animation.fade(hoverTex, 0.1, 1, 0)
     f.onHover = onHover
     f.onLeave = onLeave
 
@@ -136,7 +136,7 @@ button.Create = function(self, options, parent)
     if (options and options.color) then
         f:SetColor(unpack(options.color))
     else
-        f:SetColor(148 / 255, 244 / 255, 1, 1)
+        f:SetColor(unpack(EXFrames.Theme.accent))
     end
 
     if (options and options.onClick) then
@@ -150,6 +150,7 @@ button.Create = function(self, options, parent)
     f.Destroy = function(self)
         self:ClearObservable()
         self.icon:SetTexture(nil)
+        self.hoverTex:SetAlpha(0)
         self.icon:SetSize(0, 0)
         button.pool:Release(self)
     end

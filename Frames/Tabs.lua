@@ -15,8 +15,9 @@ local function CreateTabButton(parent)
     button:SetSize(80, 20)
 
     local texture = button:CreateTexture(nil, 'BACKGROUND')
-    texture:SetTexture(EXFrames.assets.textures.tabs.inactive)
-    texture:SetTextureSliceMargins(10, 10, 10, 10)
+    texture:SetTexture(EXFrames.assets.textures.ui.tabInactive)
+    texture:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
+    texture:SetTextureSliceMargins(6, 6, 6, 6)
     texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     texture:SetAllPoints()
 
@@ -27,11 +28,17 @@ local function CreateTabButton(parent)
     button.text = text
 
     button.SetActive = function(self, active)
-        texture:SetTexture(
-            active and
-            EXFrames.assets.textures.tabs.active or
-            EXFrames.assets.textures.tabs.inactive
-        )
+        if active then
+            texture:SetTexture(EXFrames.assets.textures.ui.tabActive)
+            texture:SetVertexColor(unpack(EXFrames.Theme.accent))
+            texture:SetTextureSliceMargins(6, 6, 6, 6)
+            texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+        else
+            texture:SetTexture(EXFrames.assets.textures.ui.tabInactive)
+            texture:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
+            texture:SetTextureSliceMargins(6, 6, 6, 6)
+            texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+        end
     end
 
     button.SetText = function(self, text)

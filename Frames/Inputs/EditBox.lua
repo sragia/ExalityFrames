@@ -22,9 +22,10 @@ local function ConfigureFrame(f, options)
     input:SetPoint('BOTTOMRIGHT')
     input:SetTextInsets(10, 10, 0, 0)
     local bgTex = input:CreateTexture(nil, 'BACKGROUND')
-    bgTex:SetTexture(EXFrames.assets.textures.input.editBoxBg)
-    bgTex:SetVertexColor(0.25, 0.25, 0.25, 0.6)
-    bgTex:SetTexCoord(6 / 512, 506 / 512, 5 / 64, 58 / 64)
+    bgTex:SetTexture(EXFrames.assets.textures.ui.inputBg)
+    bgTex:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
+    bgTex:SetTextureSliceMargins(6, 6, 6, 6)
+    bgTex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     bgTex:SetAllPoints()
 
     f.SetInputValue = function(self, value)
@@ -60,37 +61,44 @@ local function ConfigureFrame(f, options)
         return input:GetText()
     end
 
-    local hoverContainer = CreateFrame('Frame', nil, input)
-    hoverContainer:SetAllPoints()
-    local hoverBorder = hoverContainer:CreateTexture()
-    hoverBorder:SetTexture(EXFrames.assets.textures.input.editBoxHover)
-    hoverBorder:SetTexCoord(6 / 512, 506 / 512, 5 / 64, 58 / 64)
-    hoverBorder:SetVertexColor(1, 1, 1, 1)
-    hoverBorder:SetAllPoints()
-    hoverContainer:SetAlpha(0.1)
+    -- Rounded border overlay — matches inputBg corners, colour changes on hover/focus
+    local borderTex = input:CreateTexture(nil, 'OVERLAY', nil, 7)
+    borderTex:SetTexture(EXFrames.assets.textures.ui.inputBorder)
+    borderTex:SetVertexColor(unpack(EXFrames.Theme.border))
+    borderTex:SetTextureSliceMargins(6, 6, 6, 6)
+    borderTex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    borderTex:SetAllPoints()
 
-    local onHover = EXFrames.utils.animation.fade(hoverContainer, 0.15, 0.1, 1)
-    local onLeave = EXFrames.utils.animation.fade(hoverContainer, 0.15, 1, 0.1)
+    local function setBorderActive(active)
+        if active then
+            borderTex:SetVertexColor(unpack(EXFrames.Theme.accent))
+        else
+            borderTex:SetVertexColor(unpack(EXFrames.Theme.border))
+        end
+    end
 
     input:SetScript('OnEnter', function(self)
-        onHover:Play()
+        setBorderActive(true)
     end)
 
     input:SetScript('OnLeave', function(self)
-        if (not self:HasFocus()) then
-            onLeave:Play()
+        if not self:HasFocus() then
+            setBorderActive(false)
         end
     end)
 
+    input:SetScript('OnEditFocusGained', function()
+        setBorderActive(true)
+    end)
+
     input:SetScript('OnEditFocusLost', function(self)
-        if (not self:IsMouseOver()) then
-            onLeave:Play()
+        if not self:IsMouseOver() then
+            setBorderActive(false)
         end
-        if (self.onFocusLost) then
+        if self.onFocusLost then
             self.onFocusLost(self:GetText())
         end
     end)
-    hoverContainer:Show()
 
     f.SetOptionData = function(self, option)
         self.optionData = option

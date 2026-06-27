@@ -16,8 +16,8 @@ local function CreateItem(parent)
     local button = CreateFrame('Button', nil, parent, 'BackdropTemplate')
     button:SetHeight(20)
     button:SetBackdrop(EXFrames.assets.backdrop.DEFAULT)
-    button:SetBackdropColor(0, 0, 0, 1)
-    button:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+    button:SetBackdropColor(unpack(EXFrames.Theme.background))
+    button:SetBackdropBorderColor(unpack(EXFrames.Theme.border))
 
     local text = button:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
@@ -26,11 +26,11 @@ local function CreateItem(parent)
 
     button.SetActive = function(self, active)
         if (active) then
-            button:SetBackdropBorderColor(249 / 255, 95 / 255, 9 / 255, 1)
-            button:SetBackdropColor(0.15, 0.15, 0.15, 1)
+            button:SetBackdropBorderColor(unpack(EXFrames.Theme.borderActive))
+            button:SetBackdropColor(unpack(EXFrames.Theme.backgroundPanel))
         else
-            button:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
-            button:SetBackdropColor(0, 0, 0, 1)
+            button:SetBackdropBorderColor(unpack(EXFrames.Theme.border))
+            button:SetBackdropColor(unpack(EXFrames.Theme.background))
         end
     end
 

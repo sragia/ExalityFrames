@@ -25,20 +25,18 @@ local function ConfigureFrame(f)
     f.text = text
 
     local bg = f:CreateTexture(nil, 'BACKGROUND')
-    bg:SetTexture(EXFrames.assets.textures.input.buttonBg)
-    bg:SetTextureSliceMargins(10, 10, 10, 10)
+    bg:SetTexture(EXFrames.assets.textures.ui.menuItemBg)
+    bg:SetVertexColor(unpack(EXFrames.Theme.background))
+    bg:SetTextureSliceMargins(6, 6, 6, 6)
     bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg:SetVertexColor(0.05, 0.05, 0.05, 1)
     bg:SetAllPoints()
     f.bg = bg
 
     local hover = CreateFrame('Frame', nil, f)
     hover:SetAllPoints()
     local hoverTexture = hover:CreateTexture(nil, 'BACKGROUND')
-    hoverTexture:SetTexture(EXFrames.assets.textures.input.buttonHover)
-    hoverTexture:SetTextureSliceMargins(25, 25, 25, 25)
-    hoverTexture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    hoverTexture:SetVertexColor(249 / 255, 95 / 255, 9 / 255, 1)
+    hoverTexture:SetTexture(EXFrames.assets.textures.solidWhite)
+    hoverTexture:SetVertexColor(unpack(EXFrames.Theme.accent))
     hoverTexture:SetAllPoints()
     hover:SetAlpha(0.1)
 

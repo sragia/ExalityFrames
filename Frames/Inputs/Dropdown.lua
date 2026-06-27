@@ -106,11 +106,10 @@ local function CreateOption(f, frameOptions)
         option.valueIcon = valueIcon
 
         local tex = option:CreateTexture(nil, 'BACKGROUND')
-        tex:SetTexture(EXFrames.assets.textures.window.bg)
-        tex:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
-        tex:SetTextureSliceMargins(15, 15, 15, 15)
-        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-        tex:SetVertexColor(0.15, 0.15, 0.15, 1)
+        tex:SetTexture(EXFrames.assets.textures.ui.inputBg)
+        tex:SetTextureSliceMargins(6, 6, 6, 6)
+        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        tex:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
         tex:SetAllPoints()
         option.texture = tex
 
@@ -125,22 +124,35 @@ local function CreateOption(f, frameOptions)
                 self.texture:SetVertexColor(0.8, 0.8, 0.8, 1)
                 self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
             else
-                self.texture:SetTexture(EXFrames.assets.textures.window.bg)
-                self.texture:SetVertexColor(0.15, 0.15, 0.15, 1)
-                self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+                self.texture:SetTexture(EXFrames.assets.textures.ui.inputBg)
+                self.texture:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
+                self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
             end
             option.value = value
             UpdateValueDisplayLayout(valueDisplay, option.valueIcon, icon)
             option.valueDisplay:SetText(label or '')
         end
+        local selectedTex = option:CreateTexture(nil, 'ARTWORK')
+        selectedTex:SetTexture(EXFrames.assets.textures.solidWhite)
+        selectedTex:SetVertexColor(unpack(EXFrames.Theme.accent))
+        selectedTex:SetAllPoints()
+        selectedTex:SetAlpha(0)
+        option.selectedTex = selectedTex
+
         option.SetSelected = function(self, selected)
             local isTextureDropdown = self.optionData and self.optionData.isTextureDropdown
             if (selected) then
-                local value = isTextureDropdown and 1 or 0.25
-                option.texture:SetVertexColor(value, value, value, 1)
+                if isTextureDropdown then
+                    option.texture:SetVertexColor(1, 1, 1, 1)
+                else
+                    option.selectedTex:SetAlpha(0.22)
+                end
             else
-                local value = isTextureDropdown and 0.8 or 0.15
-                option.texture:SetVertexColor(value, value, value, 1)
+                if isTextureDropdown then
+                    option.texture:SetVertexColor(0.8, 0.8, 0.8, 1)
+                else
+                    option.selectedTex:SetAlpha(0)
+                end
             end
         end
     end
@@ -152,25 +164,22 @@ local function CreateOption(f, frameOptions)
     end)
 
     if (not option.hoverContainer) then
-        local hoverContainer = CreateFrame('Frame', nil, option)
-        hoverContainer:SetAllPoints()
-        local hoverBorder = hoverContainer:CreateTexture()
-        hoverContainer.border = hoverBorder
-        option.hoverContainer = hoverContainer
-        hoverBorder:SetTexture(EXFrames.assets.textures.input.editBoxHover)
-        hoverBorder:SetTexCoord(6 / 512, 506 / 512, 5 / 64, 58 / 64)
-        hoverBorder:SetAllPoints()
-        hoverContainer:SetAlpha(0)
-        option.animDur = 0.15
-        option.onHover = EXFrames.utils.animation.fade(hoverContainer, option.animDur, 0, 1)
-        option.onHoverLeave = EXFrames.utils.animation.fade(hoverContainer, option.animDur, 1, 0)
-        hoverBorder:SetVertexColor(252 / 255, 102 / 255, 3 / 255, 1)
+        option.hoverContainer = true
+        local hoverTex = option:CreateTexture(nil, 'BORDER')
+        hoverTex:SetTexture(EXFrames.assets.textures.solidWhite)
+        hoverTex:SetVertexColor(unpack(EXFrames.Theme.accent))
+        hoverTex:SetAllPoints()
+        hoverTex:SetAlpha(0)
+        option.onHover      = EXFrames.utils.animation.fade(hoverTex, 0.1, 0, 0.15)
+        option.onHoverLeave = EXFrames.utils.animation.fade(hoverTex, 0.1, 0.15, 0)
     end
 
     option:SetScript('OnEnter', function(self)
         self.onHover:Play()
     end)
-    option:SetScript('OnLeave', function(self) self.onHoverLeave:Play() end)
+    option:SetScript('OnLeave', function(self)
+        self.onHoverLeave:Play()
+    end)
     return option
 end
 
@@ -235,7 +244,7 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
         previous = option
     end
     local optionHeight = frameOptions.height and ((frameOptions.height * 0.75)) or 20
-    f.optionContainer:SetHeight(optionHeight * count)
+    f.optionContainer:SetHeight(count * (optionHeight + 2) + 2)
     f.optionContainer.scrollFrame:UpdateScrollChild(f.optionContainer:GetWidth() - 20, optionHeight * optionsNum)
 end
 
@@ -283,14 +292,22 @@ local function ConfigureFrame(f, options)
         end)
 
         local tex = f:CreateTexture(nil, 'BACKGROUND')
-        tex:SetTexture(EXFrames.assets.textures.window.bg)
-        tex:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
-        tex:SetTextureSliceMargins(15, 15, 15, 15)
-        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-        tex:SetVertexColor(0.25, 0.25, 0.25, 0.6)
+        tex:SetTexture(EXFrames.assets.textures.ui.inputBg)
+        tex:SetTextureSliceMargins(6, 6, 6, 6)
+        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        tex:SetVertexColor(unpack(EXFrames.Theme.background))
         tex:SetPoint('TOPLEFT', 0, -12)
         tex:SetPoint('BOTTOMRIGHT')
         f.texture = tex
+
+        local borderTex = f:CreateTexture(nil, 'OVERLAY', nil, 7)
+        borderTex:SetTexture(EXFrames.assets.textures.ui.inputBorder)
+        borderTex:SetVertexColor(unpack(EXFrames.Theme.border))
+        borderTex:SetTextureSliceMargins(6, 6, 6, 6)
+        borderTex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        borderTex:SetPoint('TOPLEFT', 0, -12)
+        borderTex:SetPoint('BOTTOMRIGHT')
+        f.borderTex = borderTex
     end
 
     if (not f.chevron) then
@@ -311,20 +328,15 @@ local function ConfigureFrame(f, options)
     end
 
     if (not f.hoverContainer) then
-        local hoverContainer = CreateFrame('Frame', nil, f)
-        hoverContainer:SetPoint('TOPLEFT', 0, -12)
-        hoverContainer:SetPoint('BOTTOMRIGHT')
-        local hoverBorder = hoverContainer:CreateTexture()
-        hoverContainer.border = hoverBorder
-        f.hoverContainer = hoverContainer
-        hoverBorder:SetTexture(EXFrames.assets.textures.input.editBoxHover)
-        hoverBorder:SetTexCoord(6 / 512, 506 / 512, 5 / 64, 58 / 64)
-        hoverBorder:SetAllPoints()
-        hoverContainer:SetAlpha(0.1)
-        f.animDur = 0.15
-        f.onHover = EXFrames.utils.animation.fade(hoverContainer, f.animDur, 0.1, 1)
-        f.onHoverLeave = EXFrames.utils.animation.fade(hoverContainer, f.animDur, 1, 0.1)
-        hoverBorder:SetVertexColor(0.9, 0.9, 0.9, 1)
+        f.hoverContainer = true  -- sentinel so this block only runs once per frame
+        local function setDropdownBorderActive(active)
+            if active then
+                f.borderTex:SetVertexColor(unpack(EXFrames.Theme.accent))
+            else
+                f.borderTex:SetVertexColor(unpack(EXFrames.Theme.border))
+            end
+        end
+        f.setDropdownBorderActive = setDropdownBorderActive
     end
 
     if (not f.label) then
@@ -341,9 +353,11 @@ local function ConfigureFrame(f, options)
     end
 
     f:SetScript('OnEnter', function(self)
-        self.onHover:Play()
+        self.setDropdownBorderActive(true)
     end)
-    f:SetScript('OnLeave', function(self) self.onHoverLeave:Play() end)
+    f:SetScript('OnLeave', function(self)
+        self.setDropdownBorderActive(false)
+    end)
 
     if (not f.optionContainer) then
         local optionContainer = CreateFrame('Frame', nil, UIParent)
@@ -357,11 +371,8 @@ local function ConfigureFrame(f, options)
         optionContainer:SetScript('OnEnter', function() end)
         optionContainer:SetScript('OnLeave', function() end)
         local optionContainerBg = optionContainer:CreateTexture(nil, 'BACKGROUND')
-        optionContainerBg:SetTexture(EXFrames.assets.textures.window.bg)
-        optionContainerBg:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
-        optionContainerBg:SetTextureSliceMargins(15, 15, 15, 15)
-        optionContainerBg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-        optionContainerBg:SetVertexColor(0, 0, 0, 1)
+        optionContainerBg:SetTexture(EXFrames.assets.textures.solidWhite)
+        optionContainerBg:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
         optionContainerBg:SetAllPoints()
         f.optionContainerBg = optionContainerBg
 
@@ -402,13 +413,13 @@ local function ConfigureFrame(f, options)
                 f:SetValue('isOpen', false) -- Close dropdown if other has closed it
             end
         end
-        if (event == 'windowClose') then
-            f:SetValue('isOpen', false) -- Close Dropdown if window is closed
+        if (event == 'windowClose' or event == 'menuItemClick') then
+            f:SetValue('isOpen', false)
         end
     end
 
     EXFrames:RegisterCallback({
-        events = { 'dropdownOpen', 'windowClose' },
+        events = { 'dropdownOpen', 'windowClose', 'menuItemClick' },
         func = handleDropdownEvent
     })
 end

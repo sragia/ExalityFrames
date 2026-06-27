@@ -10,14 +10,20 @@ panel.Init = function(self)
 end
 
 local configure = function(frame)
-    local bg = frame:CreateTexture()
+    local bg = frame:CreateTexture(nil, 'BACKGROUND')
     frame.Texture = bg
-    bg:SetTexture(EXFrames.assets.textures.window.bg)
-    bg:SetVertexColor(0.1, 0.1, 0.1, 0.8)
-    bg:SetTexCoord(7 / 512, 505 / 512, 7 / 512, 505 / 512)
-    bg:SetTextureSliceMargins(15, 15, 15, 15)
-    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    bg:SetTexture(EXFrames.assets.textures.ui.panelBg)
+    bg:SetVertexColor(unpack(EXFrames.Theme.background))
+    bg:SetTextureSliceMargins(8, 8, 8, 8)
+    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     bg:SetAllPoints()
+
+    local border = frame:CreateTexture(nil, 'OVERLAY', nil, 1)
+    border:SetTexture(EXFrames.assets.textures.ui.panelBorder)
+    border:SetVertexColor(unpack(EXFrames.Theme.border))
+    border:SetTextureSliceMargins(8, 8, 8, 8)
+    border:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+    border:SetAllPoints()
 
     frame.Destroy = function(self)
         panel.pool:Release(self)
