@@ -345,12 +345,12 @@ local function ConfigureFrame(f, options)
         textFrame:SetPoint('BOTTOMLEFT', f.texture, 'TOPLEFT', 0, 2)
         textFrame:SetWidth(0)
         f.label = textFrame
-        textFrame:SetText(options.label or '')
 
         f.SetLabel = function(self, text)
             self.label:SetText(text)
         end
     end
+    f.label:SetText(options.label or '')
 
     f:SetScript('OnEnter', function(self)
         self.setDropdownBorderActive(true)
