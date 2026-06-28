@@ -19,6 +19,7 @@ ns.EXFrames.Theme = {
   backgroundPanel = { 40 / 255, 34 / 255, 35 / 255, 0.4 },  -- #282223  panels / header
   accent          = { 0.671, 0.137, 0.275, 1 },             -- #AB2346
   accentLight     = { 0.906, 0.200, 0.380, 1 },             -- #e73361
+  accentDark      = { 135 / 255, 24 / 255, 51 / 255, 1 },   -- #871833
   border          = { 0.161, 0.133, 0.141, 1 },             -- #292224
   borderActive    = { 245 / 255, 7 / 255, 68 / 255, 1 },    -- #f50744  selected border
   text            = { 0.933, 0.933, 0.933, 1 },             -- #EEEEEE
@@ -225,6 +226,7 @@ end
 ns.EXFrames.assets = {
   textures = {
     solidWhite = "Interface\\Buttons\\WHITE8X8.blp",
+    solidWhiteTexture = BASE_PATH .. "Assets\\white-textured.png",
 
     -- Swap these for proper 9-slice PNGs when ready. See TEXTURE_GUIDE.md.
     ui = {

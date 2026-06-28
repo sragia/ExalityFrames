@@ -62,7 +62,10 @@ local function ConfigureFrame(f)
     fillFrame:SetPoint('BOTTOMLEFT', bar, 'BOTTOMLEFT')
     fillFrame:SetWidth(1)
     local fillTex = fillFrame:CreateTexture(nil, 'ARTWORK')
-    fillTex:SetColorTexture(unpack(EXFrames.Theme.accent))
+    fillTex:SetTexture(EXFrames.assets.textures.solidWhiteTexture)
+    fillTex:SetTextureSliceMargins(6, 6, 6, 6)
+    fillTex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+    fillTex:SetVertexColor(unpack(EXFrames.Theme.accentDark))
     fillTex:SetAllPoints()
     f.fillFrame = fillFrame
 
