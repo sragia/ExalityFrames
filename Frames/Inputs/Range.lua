@@ -40,20 +40,10 @@ local function ConfigureFrame(f)
     bgTex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     bgTex:SetAllPoints()
 
-    -- Border overlay (reuses EditBox textures)
-    local borderTex = bar:CreateTexture(nil, 'OVERLAY', nil, 7)
-    borderTex:SetTexture(EXFrames.assets.textures.ui.inputBorder)
-    borderTex:SetVertexColor(unpack(EXFrames.Theme.border))
-    borderTex:SetTextureSliceMargins(6, 6, 6, 6)
-    borderTex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    borderTex:SetAllPoints()
+    EXFrames:ApplyInputBorder(bar, 1)
 
     local function setBorderActive(active)
-        if active then
-            borderTex:SetVertexColor(unpack(EXFrames.Theme.accent))
-        else
-            borderTex:SetVertexColor(unpack(EXFrames.Theme.border))
-        end
+        bar:SetInputBorderActive(active)
     end
 
     -- Accent fill (left-anchored, width driven by spark position)

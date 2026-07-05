@@ -13,11 +13,16 @@ splitOptions.Init = function(self)
 end
 
 local function CreateItem(parent)
-    local button = CreateFrame('Button', nil, parent, 'BackdropTemplate')
-    button:SetHeight(20)
-    button:SetBackdrop(EXFrames.assets.backdrop.DEFAULT)
-    button:SetBackdropColor(unpack(EXFrames.Theme.background))
-    button:SetBackdropBorderColor(unpack(EXFrames.Theme.border))
+    local button = CreateFrame('Button', nil, parent)
+    button:SetHeight(EXFrames:ScalePixel(20, parent))
+
+    local bg = button:CreateTexture(nil, 'BACKGROUND')
+    bg:SetTexture(EXFrames.assets.textures.solidWhite)
+    bg:SetVertexColor(unpack(EXFrames.Theme.background))
+    bg:SetAllPoints()
+    button.bg = bg
+
+    EXFrames:ApplyInputBorder(button, 1)
 
     local text = button:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
@@ -26,11 +31,11 @@ local function CreateItem(parent)
 
     button.SetActive = function(self, active)
         if (active) then
-            button:SetBackdropBorderColor(unpack(EXFrames.Theme.borderActive))
-            button:SetBackdropColor(unpack(EXFrames.Theme.backgroundPanel))
+            self.bg:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
+            self:SetInputBorderActive(true)
         else
-            button:SetBackdropBorderColor(unpack(EXFrames.Theme.border))
-            button:SetBackdropColor(unpack(EXFrames.Theme.background))
+            self.bg:SetVertexColor(unpack(EXFrames.Theme.background))
+            self:SetInputBorderActive(false)
         end
     end
 
@@ -99,6 +104,7 @@ local configure = function(f)
             item:ClearAllPoints()
         end
         local prev = nil
+        local itemGap = EXFrames:ScalePixel(3, leftPanel)
         for i, item in ipairs(items) do
             if (not self.items[i]) then
                 self.items[i] = CreateItem(leftPanel)
@@ -112,8 +118,8 @@ local configure = function(f)
                 button:SetPoint('TOPRIGHT', leftPanel, 'TOPRIGHT', -3, -5)
             else
                 button:SetActive(false)
-                button:SetPoint('TOPLEFT', prev, 'BOTTOMLEFT', 0, -3)
-                button:SetPoint('TOPRIGHT', prev, 'BOTTOMRIGHT', 0, -3)
+                button:SetPoint('TOPLEFT', prev, 'BOTTOMLEFT', 0, -itemGap)
+                button:SetPoint('TOPRIGHT', prev, 'BOTTOMRIGHT', 0, -itemGap)
             end
 
             if (self.activeID and self.activeID == item.ID) then

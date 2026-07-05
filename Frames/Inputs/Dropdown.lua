@@ -75,23 +75,44 @@ local function ApplyIcon(textureFrame, icon)
     end
 end
 
-local function UpdateValueDisplayLayout(valueDisplay, valueIcon, icon, yOffset)
+local function UpdateValueDisplayLayout(valueDisplay, valueIcon, icon, overlayFrame)
     ApplyIcon(valueIcon, icon)
     valueDisplay:ClearAllPoints()
     if icon then
+        valueIcon:ClearAllPoints()
+        valueIcon:SetPoint('LEFT', overlayFrame, 'LEFT', 10, 0)
         valueDisplay:SetPoint('LEFT', valueIcon, 'RIGHT', 4, 0)
     else
-        valueDisplay:SetPoint('LEFT', 10, yOffset or 0)
+        valueDisplay:SetPoint('LEFT', overlayFrame, 'LEFT', 10, 0)
     end
+end
+
+local function UpdateOptionRowLayout(valueDisplay, valueIcon, icon, option)
+    ApplyIcon(valueIcon, icon)
+    valueDisplay:ClearAllPoints()
+    if icon then
+        valueIcon:ClearAllPoints()
+        valueIcon:SetPoint('LEFT', option, 'LEFT', 10, 0)
+        valueDisplay:SetPoint('LEFT', valueIcon, 'RIGHT', 4, 0)
+    else
+        valueDisplay:SetPoint('LEFT', option, 'LEFT', 10, 0)
+    end
+end
+
+local function GetOptionRowHeight(f)
+    return EXFrames:ScalePixel(20, f)
+end
+
+local function GetOptionRowPitch(f)
+    return GetOptionRowHeight(f) + EXFrames:ScalePixel(2, f)
 end
 
 local function CreateOption(f, frameOptions)
     local option = dropdown.optionItemPool:Acquire()
     option.optionData = f.optionData
-    option:SetSize(
-        frameOptions.width or 200,
-        frameOptions.height and ((frameOptions.height * 0.75)) or 20
-    )
+    option.dropdownId = f.dropdownId
+    local rowHeight = GetOptionRowHeight(f)
+    option:SetHeight(rowHeight)
 
     if (not option.valueDisplay) then
         local valueDisplay = option:CreateFontString(nil, 'OVERLAY')
@@ -129,7 +150,7 @@ local function CreateOption(f, frameOptions)
                 self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
             end
             option.value = value
-            UpdateValueDisplayLayout(valueDisplay, option.valueIcon, icon)
+            UpdateOptionRowLayout(valueDisplay, option.valueIcon, icon, option)
             option.valueDisplay:SetText(label or '')
         end
         local selectedTex = option:CreateTexture(nil, 'ARTWORK')
@@ -195,8 +216,10 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
     dropdown.optionItemPool:ReleaseAll()
     local previous
     local optionsNum = CountTable(options)
-    local count = min(optionsNum, 10) -- Limit to 10 options to be visible
+    local visibleRows = min(optionsNum, 10)
     local dropdownWidth = GetDropdownWidth(f, frameOptions)
+    local rowPitch = GetOptionRowPitch(f)
+    local rowGap = EXFrames:ScalePixel(2, f)
 
     local container = f.optionContainer
     local overLimit = optionsNum > 10
@@ -206,6 +229,8 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
     else
         f.optionContainer.scrollFrame:Hide()
     end
+
+    local placed = 0
     for value, label in EXFrames.utils.spairs(options, function(t, a, b)
         if (type(t[a]) == 'table' and type(t[b]) == 'table') then
             if (t[a].order and t[b].order) then
@@ -237,15 +262,23 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
             previous or container,
             previous and 'BOTTOMLEFT' or 'TOPLEFT',
             0,
-            previous and -2 or (overLimit and 0 or 2)
+            previous and -rowGap or (overLimit and 0 or rowGap)
         )
         option:SetParent(container)
         option:Show()
         previous = option
+        placed = placed + 1
     end
-    local optionHeight = frameOptions.height and ((frameOptions.height * 0.75)) or 20
-    f.optionContainer:SetHeight(count * (optionHeight + 2) + 2)
-    f.optionContainer.scrollFrame:UpdateScrollChild(f.optionContainer:GetWidth() - 20, optionHeight * optionsNum)
+
+    local totalHeight = math.max(rowPitch, (placed * rowPitch) + rowGap)
+    f.optionContainer:SetHeight((visibleRows * rowPitch) + rowGap)
+
+    if (overLimit) then
+        local scroll = f.optionContainer.scrollFrame
+        local scrollWidth = math.max(1, dropdownWidth - 20)
+        scroll:UpdateScrollChild(scrollWidth, totalHeight)
+        scroll:SetVerticalScroll(0)
+    end
 end
 
 local function ConfigureFrame(f, options)
@@ -258,23 +291,45 @@ local function ConfigureFrame(f, options)
     f.onChange = options.onChange
     f.options = options.options
 
-    if (not f.valueDisplay) then
-        local valueDisplay = f:CreateFontString(nil, 'OVERLAY')
+    if (not f.inputArea) then
+        local inputArea = CreateFrame('Frame', nil, f)
+        inputArea:SetPoint('TOPLEFT', 0, -12)
+        inputArea:SetPoint('BOTTOMRIGHT')
+        f.inputArea = inputArea
+
+        local tex = inputArea:CreateTexture(nil, 'BACKGROUND')
+        tex:SetTexture(EXFrames.assets.textures.ui.inputBg)
+        tex:SetTextureSliceMargins(6, 6, 6, 6)
+        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        tex:SetVertexColor(unpack(EXFrames.Theme.background))
+        tex:SetAllPoints()
+        f.texture = tex
+
+        EXFrames:ApplyInputBorder(inputArea, 1)
+
+        local overlayFrame = CreateFrame('Frame', nil, inputArea)
+        overlayFrame:SetAllPoints()
+        overlayFrame:EnableMouse(false)
+        f.overlayFrame = overlayFrame
+
+        local valueDisplay = overlayFrame:CreateFontString(nil, 'OVERLAY')
         f.valueDisplay = valueDisplay
         valueDisplay:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
+        valueDisplay:SetJustifyV('MIDDLE')
         valueDisplay:SetWidth(0)
         valueDisplay:SetText(' ')
 
-        local valueIcon = f:CreateTexture(nil, 'OVERLAY')
-        valueIcon:SetPoint('LEFT', 10, -6)
+        local valueIcon = overlayFrame:CreateTexture(nil, 'ARTWORK')
+        valueIcon:SetPoint('LEFT', overlayFrame, 'LEFT', 10, 0)
         valueIcon:SetSize(0, 0)
         valueIcon:Hide()
         f.valueIcon = valueIcon
 
         f:Observe('value', function(value)
+            if not f.options then return end
             local optionValue = f.options[value] or value
             local label, icon = GetOptionDisplay(optionValue)
-            UpdateValueDisplayLayout(valueDisplay, f.valueIcon, icon, -6)
+            UpdateValueDisplayLayout(valueDisplay, f.valueIcon, icon, overlayFrame)
             valueDisplay:SetText(label ~= '' and label or ' ')
         end)
 
@@ -291,30 +346,11 @@ local function ConfigureFrame(f, options)
             f:SetValue('isOpen', isOpen)
         end)
 
-        local tex = f:CreateTexture(nil, 'BACKGROUND')
-        tex:SetTexture(EXFrames.assets.textures.ui.inputBg)
-        tex:SetTextureSliceMargins(6, 6, 6, 6)
-        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-        tex:SetVertexColor(unpack(EXFrames.Theme.background))
-        tex:SetPoint('TOPLEFT', 0, -12)
-        tex:SetPoint('BOTTOMRIGHT')
-        f.texture = tex
-
-        local borderTex = f:CreateTexture(nil, 'OVERLAY', nil, 7)
-        borderTex:SetTexture(EXFrames.assets.textures.ui.inputBorder)
-        borderTex:SetVertexColor(unpack(EXFrames.Theme.border))
-        borderTex:SetTextureSliceMargins(6, 6, 6, 6)
-        borderTex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-        borderTex:SetPoint('TOPLEFT', 0, -12)
-        borderTex:SetPoint('BOTTOMRIGHT')
-        f.borderTex = borderTex
-    end
-
-    if (not f.chevron) then
-        local chevron = f:CreateTexture(nil, 'OVERLAY')
+        local chevron = overlayFrame:CreateTexture(nil, 'OVERLAY')
         chevron:SetSize(12, 12)
-        chevron:SetPoint('RIGHT', -10, -6)
+        chevron:SetPoint('RIGHT', overlayFrame, 'RIGHT', -10, 0)
         chevron:SetTexture(EXFrames.assets.textures.icon.chevronDown)
+        f.chevron = chevron
         f:Observe('isOpen', function(value)
             if (value) then
                 f.optionContainer:Show()
@@ -330,10 +366,8 @@ local function ConfigureFrame(f, options)
     if (not f.hoverContainer) then
         f.hoverContainer = true  -- sentinel so this block only runs once per frame
         local function setDropdownBorderActive(active)
-            if active then
-                f.borderTex:SetVertexColor(unpack(EXFrames.Theme.accent))
-            else
-                f.borderTex:SetVertexColor(unpack(EXFrames.Theme.border))
+            if f.inputArea then
+                f.inputArea:SetInputBorderActive(active)
             end
         end
         f.setDropdownBorderActive = setDropdownBorderActive
@@ -342,7 +376,7 @@ local function ConfigureFrame(f, options)
     if (not f.label) then
         local textFrame = f:CreateFontString(nil, 'OVERLAY')
         textFrame:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
-        textFrame:SetPoint('BOTTOMLEFT', f.texture, 'TOPLEFT', 0, 2)
+        textFrame:SetPoint('BOTTOMLEFT', f.inputArea or f.texture, 'TOPLEFT', 0, 2)
         textFrame:SetWidth(0)
         f.label = textFrame
 
@@ -396,10 +430,12 @@ local function ConfigureFrame(f, options)
         self.optionData = option
         self:SetLabel(option.label)
         self:SetOptions(option.getOptions())
-        self:SetValue('value', option.currentValue())
         self.frameOptions.isFontDropdown = option.isFontDropdown
         self.frameOptions.isTextureDropdown = option.isTextureDropdown
         self.onChange = option.onChange
+        if option.currentValue then
+            self:SetValue('value', option.currentValue())
+        end
     end
 
     f.SetFrameWidth = function(self, width)

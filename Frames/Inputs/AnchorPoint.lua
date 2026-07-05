@@ -41,7 +41,7 @@ local function ConfigureFrame(f)
     f.Label = label
 
     local border = CreateFrame('Frame', nil, f, 'BackdropTemplate')
-    border:SetBackdrop(EXFrames.assets.backdrop.pixelPerfect(borderSize))
+    EXFrames:RegisterPixelPerfectBackdrop(border, borderSize)
     border:SetBackdropBorderColor(1, 1, 1, 0.3)
     border:SetBackdropColor(0, 0, 0, 0.3)
     border:SetPoint('LEFT', paddingX, 0)

@@ -16,14 +16,7 @@ local function ConfigureFrame(f)
     f:SetAutoFocus(false)
     f:SetTextInsets(10, 10, 10, 10)
     Mixin(f, BackdropTemplateMixin)
-    f:SetBackdrop({
-        bgFile = "Interface\\BUTTONS\\WHITE8X8.blp",
-        edgeFile = "Interface\\BUTTONS\\WHITE8X8.blp",
-        tile = false,
-        tileSize = 0,
-        edgeSize = 1,
-        insets = { left = 0, right = 0, top = 0, bottom = 0 }
-    })
+    EXFrames:RegisterPixelPerfectBackdrop(f, 1)
     f:SetBackdropColor(.1, .1, .1, .8)
     f:SetBackdropBorderColor(0, 0, 0, 1)
     f:SetFont(EXFrames.assets.font.default(), 10, "OUTLINE")

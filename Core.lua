@@ -10,6 +10,90 @@ ns.EXFrames.frames = {}
 
 ns.EXFrames.config = {}
 
+ns.EXFrames.pixelPerfectBackdrops = {}
+ns.EXFrames.inputBorders = {}
+
+local function resolveScale(region)
+  if region and region.GetEffectiveScale then
+    return region:GetEffectiveScale()
+  end
+  return UIParent:GetEffectiveScale()
+end
+
+local function scalePixel(value, region, minPixels)
+  if ns.EXFrames.config.scalePixel then
+    return ns.EXFrames.config.scalePixel(value, region, minPixels)
+  end
+  return PixelUtil.GetNearestPixelSize(value, resolveScale(region), minPixels)
+end
+
+ns.EXFrames.ScalePixel = function(self, value, region, minPixels)
+  return scalePixel(value, region, minPixels)
+end
+
+ns.EXFrames.ScalePixels = function(self, pixelCount, region)
+  local scale = resolveScale(region)
+  return (pixelCount * PixelUtil.GetPixelToUIUnitFactor()) / scale
+end
+
+ns.EXFrames.RegisterPixelPerfectBackdrop = function(self, frame, borderSize)
+  borderSize = borderSize or 1
+  table.insert(self.pixelPerfectBackdrops, { frame = frame, borderSize = borderSize })
+  frame:SetBackdrop(self.assets.backdrop.pixelPerfect(borderSize, frame))
+end
+
+ns.EXFrames.RefreshPixelPerfect = function(self)
+  for i = #self.pixelPerfectBackdrops, 1, -1 do
+    local entry = self.pixelPerfectBackdrops[i]
+    if entry.frame and entry.frame.SetBackdrop then
+      if self.config.snapFrame then
+        self.config.snapFrame(entry.frame)
+      end
+      entry.frame:SetBackdrop(self.assets.backdrop.pixelPerfect(entry.borderSize, entry.frame))
+    else
+      table.remove(self.pixelPerfectBackdrops, i)
+    end
+  end
+  self:RefreshInputBorders()
+end
+
+ns.EXFrames.ApplyInputBorder = function(self, frame, borderSize)
+  borderSize = borderSize or 1
+  if not frame.PPBorder and self.config.addPixelPerfectBorder then
+    frame.PPBorder = self.config.addPixelPerfectBorder(frame, borderSize, { register = false })
+    if frame.PPBorder then
+      table.insert(self.inputBorders, frame)
+    end
+  end
+  if frame.PPBorder then
+    frame.PPBorder:SetBorderThickness(borderSize)
+    frame.PPBorder:SetBorderColor(unpack(self.Theme.border))
+  end
+  if not frame.SetInputBorderActive then
+    local theme = self.Theme
+    frame.SetInputBorderActive = function(activeFrame, active)
+      if not activeFrame.PPBorder then return end
+      if active then
+        activeFrame.PPBorder:SetBorderColor(unpack(theme.accent))
+      else
+        activeFrame.PPBorder:SetBorderColor(unpack(theme.border))
+      end
+    end
+  end
+  return frame.PPBorder
+end
+
+ns.EXFrames.RefreshInputBorders = function(self)
+  for i = #self.inputBorders, 1, -1 do
+    local frame = self.inputBorders[i]
+    if frame and frame.PPBorder then
+      frame.PPBorder:SetBorderThickness(frame.PPBorder.thicknessPixels or 1)
+    else
+      table.remove(self.inputBorders, i)
+    end
+  end
+end
+
 -- Color palette. Override per-project with EXFrames:SetTheme().
 ns.EXFrames.Theme = {
   white           = { 237 / 255, 237 / 255, 237 / 255, 1 }, -- #ededed
@@ -219,10 +303,6 @@ ns.EXFrames.utils = {
   end,
 }
 
-ns.EXFrames.ScalePixel = function(self, value)
-  return PixelUtil.GetNearestPixelSize(value, UIParent:GetScale())
-end
-
 ns.EXFrames.assets = {
   textures = {
     solidWhite = "Interface\\Buttons\\WHITE8X8.blp",
@@ -301,12 +381,16 @@ ns.EXFrames.assets = {
       edgeSize = 1,
       insets = { left = 0, right = 0, top = 0, bottom = 0 }
     },
-    pixelPerfect = function(borderSize)
+    pixelPerfect = function(borderSize, region)
       borderSize = borderSize or 1
+      local edge = ns.EXFrames:ScalePixels(borderSize, region)
       return {
         bgFile = "Interface\\BUTTONS\\WHITE8X8.blp",
         edgeFile = "Interface\\BUTTONS\\WHITE8X8.blp",
-        edgeSize = ns.EXFrames:ScalePixel(borderSize)
+        tile = false,
+        tileSize = 0,
+        edgeSize = edge,
+        insets = { left = 0, right = 0, top = 0, bottom = 0 }
       }
     end
   },

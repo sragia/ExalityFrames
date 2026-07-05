@@ -48,7 +48,7 @@ local function StyleButton(f, isMain)
     border:SetVertexColor(unpack(th.border))
     border:SetPoint('TOPLEFT', bg, 'TOPLEFT')
     border:SetPoint('BOTTOM', bg, 'BOTTOM')
-    border:SetWidth(5)
+    border:SetWidth(EXFrames:ScalePixel(5, f))
     f.border = border
 
     local glow = f:CreateTexture(nil, 'BORDER')
@@ -58,7 +58,7 @@ local function StyleButton(f, isMain)
     glow:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
     glow:SetPoint('TOPLEFT', bg, 'TOPLEFT')
     glow:SetPoint('BOTTOM', bg, 'BOTTOM')
-    glow:SetWidth(60)
+    glow:SetWidth(EXFrames:ScalePixel(60, f))
     glow:Hide()
     f.glow = glow
 
