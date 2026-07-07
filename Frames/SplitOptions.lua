@@ -61,7 +61,7 @@ local configure = function(f)
     leftPanel:SetBackgroundColor(0.05, 0.05, 0.05, 0.8)
     leftPanel:SetParent(f)
     leftPanel:SetPoint('TOPLEFT', 5, -5)
-    leftPanel:SetPoint('BOTTOMRIGHT', f, 'BOTTOMLEFT', 165, 5)
+    leftPanel:SetPoint('BOTTOMRIGHT', f, 'BOTTOMLEFT', 135, 5)
 
     local rightPanel = EXFrames:GetFrame('panel-frame'):Create()
     rightPanel:SetBackgroundColor(0.05, 0.05, 0.05, 0.8)
@@ -174,7 +174,11 @@ local configure = function(f)
     f.Destroy = function(self)
         self.extraButton:Hide()
         self.activeID = nil
+        if self.scrollFrame then
+            self.scrollFrame:Reset()
+        end
         self:ClearAllPoints()
+        self:Hide()
         splitOptions.pool:Release(self)
     end
 
@@ -187,6 +191,10 @@ splitOptions.Create = function(self)
     local f = self.pool:Acquire()
     if not f.configured then
         configure(f)
+    end
+
+    if f.scrollFrame then
+        f.scrollFrame:Reset()
     end
 
     f:Show()

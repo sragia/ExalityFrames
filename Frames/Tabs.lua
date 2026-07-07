@@ -86,8 +86,8 @@ end
 
 local function ClearScrollable(frame)
     if frame.scrollFrame then
-        frame.scrollFrame:Hide()
-        frame.scrollFrame:SetVerticalScroll(0)
+        frame.scrollFrame:Destroy()
+        frame.scrollFrame = nil
     end
     frame.container = frame.panel
     frame.container.exuiAutoSizeHeight = nil
@@ -169,6 +169,7 @@ local configure = function(frame)
     frame.Destroy = function(self)
         ClearScrollable(self)
         self:ClearAllPoints()
+        self:Hide()
         tabs.pool:Release(self)
     end
 

@@ -72,12 +72,6 @@ local function ConfigureFrame(f)
 
         p:SetPoint('CENTER', border, point, x, y)
 
-
-        local tooltip = EXFrames:GetFrame('tooltip'):Get({
-            text = point,
-        }, p)
-        p.Tooltip = tooltip
-
         local texture = p:CreateTexture(nil, 'OVERLAY')
         texture:SetTexture(EXFrames.assets.textures.input.anchorPoint.inactive)
         texture:SetAllPoints()
@@ -86,6 +80,11 @@ local function ConfigureFrame(f)
         p.Point = point
 
         p:SetScript('OnEnter', function(self)
+            if not self.Tooltip then
+                self.Tooltip = EXFrames:GetFrame('tooltip'):Get({
+                    text = self.Point,
+                }, self)
+            end
             self.Tooltip:ShowTooltip()
             if (self.isActive) then return end
             self.texture:SetTexture(EXFrames.assets.textures.input.anchorPoint.active)
@@ -93,7 +92,9 @@ local function ConfigureFrame(f)
         end)
 
         p:SetScript('OnLeave', function(self)
-            self.Tooltip:HideTooltip()
+            if self.Tooltip then
+                self.Tooltip:HideTooltip()
+            end
             if (self.isActive) then return end
             self.texture:SetTexture(EXFrames.assets.textures.input.anchorPoint.inactive)
             self.texture:SetVertexColor(1, 1, 1, 1)

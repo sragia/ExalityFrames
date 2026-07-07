@@ -87,6 +87,71 @@ local function UpdateValueDisplayLayout(valueDisplay, valueIcon, icon, overlayFr
     end
 end
 
+local function ResolveOptionEntry(f, value)
+    if value == nil then
+        return nil, nil
+    end
+
+    if f.options then
+        local entry = f.options[value]
+        if entry ~= nil then
+            return GetOptionDisplay(entry)
+        end
+    end
+
+    local optionData = f.optionData
+    if optionData and (optionData.isFontDropdown or optionData.isTextureDropdown) then
+        return type(value) == 'string' and value or tostring(value), nil
+    end
+
+    if f.getOptionsFn then
+        local options = f.getOptionsFn()
+        local entry = options and options[value]
+        if entry ~= nil then
+            return GetOptionDisplay(entry)
+        end
+    end
+
+    return type(value) == 'string' and value or tostring(value), nil
+end
+
+local function ApplyClosedValueStyling(f, value)
+    local optionData = f.optionData
+    if optionData and optionData.isFontDropdown and LSM and value then
+        f.valueDisplay:SetFont(LSM:Fetch('font', value), 10, 'OUTLINE')
+    else
+        f.valueDisplay:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
+    end
+
+    if optionData and optionData.isTextureDropdown and LSM and value then
+        f.texture:SetTexture(LSM:Fetch('statusbar', value))
+        f.texture:SetVertexColor(0.8, 0.8, 0.8, 1)
+        f.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    else
+        f.texture:SetTexture(EXFrames.assets.textures.ui.inputBg)
+        f.texture:SetTextureSliceMargins(6, 6, 6, 6)
+        f.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        f.texture:SetVertexColor(unpack(EXFrames.Theme.background))
+    end
+end
+
+local function UpdateClosedValueDisplay(f, value)
+    if not f.valueDisplay then
+        return
+    end
+    local displayValue = value
+    if f.optionData and f.optionData.getDisplayValue then
+        displayValue = f.optionData.getDisplayValue(value)
+    end
+    local label, icon = ResolveOptionEntry(f, displayValue)
+    if not label then
+        return
+    end
+    ApplyClosedValueStyling(f, displayValue)
+    UpdateValueDisplayLayout(f.valueDisplay, f.valueIcon, icon, f.overlayFrame)
+    f.valueDisplay:SetText(label ~= '' and label or ' ')
+end
+
 local function UpdateOptionRowLayout(valueDisplay, valueIcon, icon, option)
     ApplyIcon(valueIcon, icon)
     valueDisplay:ClearAllPoints()
@@ -326,11 +391,7 @@ local function ConfigureFrame(f, options)
         f.valueIcon = valueIcon
 
         f:Observe('value', function(value)
-            if not f.options then return end
-            local optionValue = f.options[value] or value
-            local label, icon = GetOptionDisplay(optionValue)
-            UpdateValueDisplayLayout(valueDisplay, f.valueIcon, icon, overlayFrame)
-            valueDisplay:SetText(label ~= '' and label or ' ')
+            UpdateClosedValueDisplay(f, value)
         end)
 
         f.SetInputValue = function(self, value)
@@ -353,8 +414,11 @@ local function ConfigureFrame(f, options)
         f.chevron = chevron
         f:Observe('isOpen', function(value)
             if (value) then
+                if f.getOptionsFn then
+                    f:SetOptions(f.getOptionsFn())
+                end
                 f.optionContainer:Show()
-                PopulateOptions(f, f.options, f.frameOptions, f.value)
+                PopulateOptions(f, f.options or {}, f.frameOptions, f.value)
                 chevron:SetRotation(math.rad(180))
             else
                 f.optionContainer:Hide()
@@ -428,8 +492,15 @@ local function ConfigureFrame(f, options)
 
     f.SetOptionData = function(self, option)
         self.optionData = option
+        self.getOptionsFn = option.getOptions
         self:SetLabel(option.label)
-        self:SetOptions(option.getOptions())
+        if option.getOptions then
+            self:SetOptions(nil)
+        elseif option.options then
+            self:SetOptions(option.options)
+        else
+            self:SetOptions({})
+        end
         self.frameOptions.isFontDropdown = option.isFontDropdown
         self.frameOptions.isTextureDropdown = option.isTextureDropdown
         self.onChange = option.onChange
@@ -475,6 +546,7 @@ dropdown.Create = function(self, options, parent)
     end
     input.Destroy = function(self)
         self.optionData = nil
+        self.getOptionsFn = nil
         self:SetValue('isOpen', false)
         dropdown.pool:Release(self)
     end

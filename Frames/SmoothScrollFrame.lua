@@ -292,12 +292,23 @@ local function ConfigureFrame(f)
         ApplyScroll(self, value)
     end
 
-    f.Destroy = function(self)
+    f.Reset = function(self)
         self.draggingThumb = false
         self:SetScript('OnUpdate', nil)
         self.smoothUpdateActive = false
         self.scrollOffset = 0
         self.targetScroll = 0
+        if self.child then
+            self.child:SetSize(1, 1)
+            self.child:ClearAllPoints()
+            self.child:SetPoint('TOPLEFT', self.content, 'TOPLEFT', 0, 0)
+        end
+        self:UpdateScrollbar()
+    end
+
+    f.Destroy = function(self)
+        self:Reset()
+        self:Hide()
         smoothScrollFrame.pool:Release(self)
     end
 
@@ -322,9 +333,7 @@ smoothScrollFrame.Create = function(self)
         ConfigureFrame(f)
     end
 
-    f.scrollOffset = 0
-    f.targetScroll = 0
-    f.draggingThumb = false
+    f:Reset()
     f:Show()
     return f
 end

@@ -66,11 +66,10 @@ luaEditor.Create = function(self, options, parent)
             luaEditor.pool:Release(self.input)
             self.input = nil
         end
-        self.draggingThumb = false
-        self:SetScript('OnUpdate', nil)
-        self.smoothUpdateActive = false
-        self.scrollOffset = 0
-        self.targetScroll = 0
+        if self.Reset then
+            self:Reset()
+        end
+        self:Hide()
         EXFrames:GetFrame('smooth-scroll-frame').pool:Release(self)
     end
     if (options and options.text) then

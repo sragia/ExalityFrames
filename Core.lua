@@ -257,7 +257,108 @@ ns.EXFrames.utils = {
       end)
 
       return ag
-    end
+    end,
+    lerpSize = function(frame, duration, toW, toH, onFinished, onUpdate)
+      local fromW = frame:GetWidth()
+      local fromH = frame:GetHeight()
+      local elapsed = 0
+      local point, relativeTo, relativePoint, xOfs, yOfs = frame:GetPoint(1)
+      local startX = xOfs or 0
+      local startY = yOfs or 0
+
+      frame:SetScript('OnUpdate', function(self, dt)
+        elapsed = elapsed + dt
+        local t = math.min(elapsed / duration, 1)
+        local w = fromW + (toW - fromW) * t
+        local h = fromH + (toH - fromH) * t
+
+        self:SetSize(w, h)
+        if (point == 'CENTER') then
+          self:SetPoint(point, relativeTo, relativePoint, startX - (w - fromW) / 2, startY)
+        end
+
+        if (onUpdate) then
+          onUpdate(t, w, h)
+        end
+
+        if (t >= 1) then
+          self:SetScript('OnUpdate', nil)
+          self:SetSize(toW, toH)
+          if (point == 'CENTER') then
+            self:SetPoint(point, relativeTo, relativePoint, startX - (toW - fromW) / 2, startY)
+          end
+          if (onFinished) then
+            onFinished()
+          end
+        end
+      end)
+    end,
+  },
+  texture = {
+    clampSliceMargins = function(left, top, right, bottom, width, height, minCenter)
+      minCenter = minCenter or 1
+      if (not width or not height or width <= 0 or height <= 0) then
+        return left, top, right, bottom
+      end
+
+      local horizontal = left + right
+      local maxHorizontal = width - minCenter
+      if (horizontal > maxHorizontal and horizontal > 0) then
+        local scale = maxHorizontal / horizontal
+        left = left * scale
+        right = right * scale
+      end
+
+      local vertical = top + bottom
+      local maxVertical = height - minCenter
+      if (vertical > maxVertical and vertical > 0) then
+        local scale = maxVertical / vertical
+        top = top * scale
+        bottom = bottom * scale
+      end
+
+      return left, top, right, bottom
+    end,
+    applySlice = function(tex, margins, region, sliceMode)
+      local left, top, right, bottom
+
+      -- Support both static numbers and dynamic functions
+      if (type(margins) == 'function') then
+        -- Call the function with width and height to get adaptive margins
+        margins = margins(region:GetWidth(), region:GetHeight())
+      end
+
+      if (type(margins) == 'number') then
+        left, top, right, bottom = margins, margins, margins, margins
+      else
+        left, top, right, bottom = margins[1], margins[2], margins[3], margins[4]
+      end
+
+      left, top, right, bottom = ns.EXFrames.utils.texture.clampSliceMargins(
+        left, top, right, bottom,
+        region:GetWidth(),
+        region:GetHeight()
+      )
+
+      tex:SetTextureSliceMargins(left, top, right, bottom)
+      if (sliceMode) then
+        tex:SetTextureSliceMode(sliceMode)
+      end
+    end,
+    bindSliceToRegion = function(region, entries)
+      local function update()
+        if (region:GetWidth() <= 0 or region:GetHeight() <= 0) then
+          return
+        end
+        for _, entry in ipairs(entries) do
+          ns.EXFrames.utils.texture.applySlice(entry.tex, entry.margins, region, entry.mode)
+        end
+      end
+
+      region:HookScript('OnSizeChanged', update)
+      region:HookScript('OnShow', update)
+      update()
+    end,
   },
   addObserver = function(t, force)
     if (t.observable and not force) then
@@ -312,7 +413,7 @@ ns.EXFrames.assets = {
     ui = {
       panelBg        = BASE_PATH .. "Assets\\UI\\panel-bg.png",         -- fill,   margins 20
       panelBorder    = BASE_PATH .. "Assets\\UI\\panel-border.png",     -- border, margins 20
-      buttonBg       = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 31
+      buttonBg       = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 6
       inputBg        = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 40
       inputBorder    = BASE_PATH .. "Assets\\UI\\input-border.png",     -- border, margins 40
       menuItemBg     = BASE_PATH .. "Assets\\UI\\menu-item-bg.png",     -- fill,   margins 6

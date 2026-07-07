@@ -9,6 +9,11 @@ local menuItem = EXFrames:GetFrame('menu-item')
 
 menuItem.pool = {}
 
+local COMPACT_SIZE = 30
+local COMPACT_ICON_SIZE = 24
+
+menuItem.COMPACT_SIZE = COMPACT_SIZE
+
 menuItem.Init = function(self)
     self.pool = CreateFramePool('Button', UIParent)
 end
@@ -69,6 +74,13 @@ local function StyleButton(f, isMain)
     f.text = text
 
     if (isMain) then
+        local icon = f:CreateTexture(nil, 'OVERLAY')
+        icon:SetSize(COMPACT_ICON_SIZE, COMPACT_ICON_SIZE)
+        icon:SetPoint('CENTER')
+        icon:Hide()
+        icon:SetAlpha(0)
+        f.icon = icon
+
         local expand = CreateFrame('Button', nil, f)
         expand:SetPropagateMouseClicks(true)
         expand:SetPropagateMouseMotion(true)
@@ -98,13 +110,77 @@ local function StyleButton(f, isMain)
         self.bg:SetPoint('TOPLEFT', -2, 2)
         self.bg:SetPoint('BOTTOMRIGHT', -2, 2)
         self.bg2:Show()
+
+        if (self.icon and self.icon:IsShown()) then
+            self.icon:ClearAllPoints()
+            self.icon:SetPoint('CENTER', -2, 2)
+        end
+
+        local owner = self.__owner
+        if (owner and owner.isCompact and owner.tooltipText) then
+            if (not owner.tooltip) then
+                owner.tooltip = EXFrames:GetFrame('tooltip'):Get({ text = owner.tooltipText }, self)
+            else
+                owner.tooltip:SetText(owner.tooltipText)
+            end
+            owner.tooltip:ShowTooltip()
+        end
     end)
 
     f:SetScript('OnLeave', function(self)
         self.bg:ClearAllPoints()
         self.bg:SetAllPoints()
         self.bg2:Hide()
+
+        if (self.icon) then
+            self.icon:ClearAllPoints()
+            self.icon:SetPoint('CENTER')
+        end
+
+        local owner = self.__owner
+        if (owner and owner.tooltip) then
+            owner.tooltip:HideTooltip()
+        end
     end)
+end
+
+local function CollapseSubButtons(f)
+    for _, btn in ipairs(f.subButtons) do
+        btn:ClearPoint('TOPLEFT')
+        btn:Hide()
+        btn.onClick = nil
+    end
+    f.isExpanded = false
+end
+
+local function ApplyCompactLayout(f, compact)
+    if (compact) then
+        CollapseSubButtons(f)
+        f:SetSize(COMPACT_SIZE, COMPACT_SIZE)
+        f.main:SetSize(COMPACT_SIZE, COMPACT_SIZE)
+        f.main:ClearAllPoints()
+        f.main:SetAllPoints()
+        f.main.expand:Hide()
+        f.main.glow:SetWidth(EXFrames:ScalePixel(COMPACT_SIZE, f.main))
+        f.main.text:Hide()
+        f.main.icon:Show()
+        f.main.icon:SetAlpha(1)
+        f.main.text:SetAlpha(0)
+    else
+        f:SetHeight(30)
+        f.main:SetHeight(30)
+        f.main:ClearAllPoints()
+        f.main:SetPoint('TOPLEFT')
+        f.main:SetPoint('RIGHT')
+        f.main.glow:SetWidth(EXFrames:ScalePixel(60, f.main))
+        f.main.text:Show()
+        f.main.text:SetAlpha(1)
+        f.main.icon:Hide()
+        f.main.icon:SetAlpha(0)
+        if (f.isExpandable) then
+            f.main.expand:Show()
+        end
+    end
 end
 
 local function ConfigureFrame(f)
@@ -112,9 +188,13 @@ local function ConfigureFrame(f)
     f.isSelected = false
     f.isExpanded = false
     f.isExpandable = false
+    f.isCompact = false
     f.subMenuItems = {}
     f.subButtons = {}
     f.data = nil
+    f.tooltipText = nil
+    f.tooltip = nil
+    f._navModule = nil
 
     local mainButton = CreateFrame('Button', nil, f)
     mainButton:SetHeight(30)
@@ -126,7 +206,7 @@ local function ConfigureFrame(f)
 
     mainButton:SetScript('OnClick', function(self)
         if (self.__owner.onClick) then
-            self.__owner:onClick()
+            self.__owner:onClick(self.__owner)
         end
 
         if (self.__owner.isExpandable) then
@@ -138,10 +218,32 @@ local function ConfigureFrame(f)
 
     f.SetText = function(self, text)
         self.main.text:SetText(text)
+        self.tooltipText = text
+    end
+
+    f.SetIcon = function(self, texture)
+        self.main.icon:SetTexture(texture)
+        if (self.isCompact) then
+            self.main.icon:Show()
+            self.main.icon:SetAlpha(1)
+            self.main.text:Hide()
+        end
+    end
+
+    f.IsCompact = function(self)
+        return self.isCompact
+    end
+
+    f.SetCompact = function(self, compact)
+        if (self.isCompact == compact) then
+            return
+        end
+        self.isCompact = compact
+        ApplyCompactLayout(self, compact)
     end
 
     f.SetSelected = function(self, value)
-        if (self.isExpandable) then
+        if (self.isExpandable and not self.isCompact) then
             local found = false
             for _, btn in ipairs(self.subButtons) do
                 local eq = btn.data:GetName() == value
@@ -154,8 +256,17 @@ local function ConfigureFrame(f)
             if (not found) then
                 self:SetValue('isSelected', false)
             end
+        elseif (self.isExpandable and self.isCompact and self._navModule and self._navModule.subMenu) then
+            local found = false
+            for _, sub in ipairs(self._navModule.subMenu) do
+                if (sub.data and sub.data:GetName() == value) then
+                    found = true
+                    break
+                end
+            end
+            self:SetValue('isSelected', found)
         else
-            self:SetValue('isSelected', self.data:GetName() == value)
+            self:SetValue('isSelected', self.data and self.data:GetName() == value)
         end
     end
 
@@ -203,6 +314,7 @@ local function ConfigureFrame(f)
             if (not self.subButtons[idx]) then
                 self.subButtons[idx] = CreateSubButton(self)
             end
+            self.subButtons[idx]:Show()
             self.subButtons[idx].text:SetText(item.name)
             self.subButtons[idx].onClick = item.onClick
             self.subButtons[idx].data = item.data
@@ -219,16 +331,19 @@ local function ConfigureFrame(f)
     end
 
     f.Collapse = function(self)
-        for _, btn in ipairs(self.subButtons) do
-            btn:ClearPoint('TOPLEFT')
-            btn.onClick = nil
+        CollapseSubButtons(self)
+        if (self.isCompact) then
+            self:SetSize(COMPACT_SIZE, COMPACT_SIZE)
+        else
+            self:SetHeight(30)
         end
-        self:SetHeight(30)
     end
 
     f.SetExpandable = function(self, expandable)
         self.isExpandable = expandable
-        self.main.expand:SetShown(expandable)
+        if (not self.isCompact) then
+            self.main.expand:SetShown(expandable)
+        end
     end
 
     f:Observe('isSelected', function(selected, _, _, self)
@@ -242,6 +357,9 @@ local function ConfigureFrame(f)
     end)
 
     f:Observe('isExpanded', function(expanded, _, _, self)
+        if (self.isCompact) then
+            return
+        end
         if (expanded) then
             self:Expand()
             self.main.expand.icon:SetTexture(EXFrames.assets.textures.menuItem.minus)
@@ -256,14 +374,14 @@ local function ConfigureFrame(f)
     end
 
     f.SetOnClick = function(self, onClick)
-        f.onClick = onClick
+        self.onClick = onClick
     end
 
     f.SetData = function(self, data)
         self.data = data
     end
 
-    f:SetHeight(30) -- TODO: need to calculate this when expanded
+    f:SetHeight(30)
 
     f.configured = true
 end
@@ -278,7 +396,12 @@ menuItem.Create = function(self, parent)
     end
 
     f.Destroy = function(self)
+        if (self.tooltip) then
+            self.tooltip:HideTooltip()
+            self.tooltip = nil
+        end
         self.data = nil
+        self._navModule = nil
         menuItem.pool:Release(self)
     end
 
@@ -286,6 +409,21 @@ menuItem.Create = function(self, parent)
         f:SetParent(parent)
     else
         f:SetParent(nil)
+    end
+
+    if (f.configured) then
+        f.isExpandable = false
+        f.isExpanded = false
+        f.onClick = nil
+        f._navModule = nil
+        if (f.isCompact) then
+            f.isCompact = false
+            ApplyCompactLayout(f, false)
+        end
+        if (f.tooltip) then
+            f.tooltip:HideTooltip()
+            f.tooltip = nil
+        end
     end
 
     f:Show()
