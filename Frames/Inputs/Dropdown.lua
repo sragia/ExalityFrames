@@ -4,8 +4,8 @@ local EXFrames = ns.EXFrames
 
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
 
----@class ExalityFramesScrollFrame
-local scrollFrame = EXFrames:GetFrame('scroll-frame')
+---@class ExalityFramesSmoothScrollFrame
+local scrollFrame = EXFrames:GetFrame('smooth-scroll-frame')
 
 ---@class DropdownOptionEntry : string|{label: string, icon?: string|{texture: string, width?: number, height?: number, imageSize?: {w: number, h: number}}, order?: number}
 ---@class DropdownOptions : {initial: string, onChange: function, options: table<string|number, DropdownOptionEntry>, label: string, width?: number, height?: number}
@@ -252,7 +252,7 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
         end
         local option = CreateOption(f, frameOptions)
         if (overLimit) then
-            option:SetWidth(dropdownWidth - 20)
+            option:SetWidth(dropdownWidth)
         else
             option:SetWidth(dropdownWidth)
         end
@@ -275,7 +275,7 @@ local function PopulateOptions(f, options, frameOptions, selectedValue)
 
     if (overLimit) then
         local scroll = f.optionContainer.scrollFrame
-        local scrollWidth = math.max(1, dropdownWidth - 20)
+        local scrollWidth = math.max(1, dropdownWidth)
         scroll:UpdateScrollChild(scrollWidth, totalHeight)
         scroll:SetVerticalScroll(0)
     end
@@ -413,7 +413,7 @@ local function ConfigureFrame(f, options)
         local scrollFrame = scrollFrame:Create()
         scrollFrame:SetParent(optionContainer)
         scrollFrame:SetPoint('TOPLEFT', 0, 0)
-        scrollFrame:SetPoint('BOTTOMRIGHT', -20, 0)
+        scrollFrame:SetPoint('BOTTOMRIGHT', 0, 0)
         scrollFrame:Hide()
         f.optionContainer.scrollFrame = scrollFrame
     end

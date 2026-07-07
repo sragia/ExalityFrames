@@ -5,6 +5,9 @@ local EXFrames = ns.EXFrames
 --- @class ExalityFramesTabsFrame
 local tabs = EXFrames:GetFrame('tabs-frame')
 
+---@class ExalityFramesSmoothScrollFrame
+local smoothScrollFrame = EXFrames:GetFrame('smooth-scroll-frame')
+
 tabs.Init = function(self)
     tabs.pool = CreateFramePool('Frame', UIParent)
 end
@@ -55,6 +58,43 @@ local function CreateTabButton(parent)
     return button
 end
 
+local function SetupScrollable(frame)
+    if not frame.scrollFrame then
+        local scroll = smoothScrollFrame:Create()
+        scroll:SetParent(frame.panel)
+        scroll:SetPoint('TOPLEFT', 5, -5)
+        scroll:SetPoint('BOTTOMRIGHT', -5, 5)
+        frame.scrollFrame = scroll
+    end
+
+    frame.scrollFrame:Show()
+    frame.container = frame.scrollFrame.child
+    frame.container.exuiAutoSizeHeight = true
+    frame.scrollable = true
+
+    frame.UpdateScroll = function(self)
+        local width = math.max(1, self.panel:GetWidth() - 15)
+        local viewportHeight = math.max(1, self.panel:GetHeight() - 15)
+        local contentHeight = self.container:GetHeight()
+        if contentHeight > 0 then
+            self.scrollFrame:UpdateScrollChild(width, math.max(contentHeight, viewportHeight))
+        else
+            self.scrollFrame:UpdateScrollChild(width, viewportHeight)
+        end
+    end
+end
+
+local function ClearScrollable(frame)
+    if frame.scrollFrame then
+        frame.scrollFrame:Hide()
+        frame.scrollFrame:SetVerticalScroll(0)
+    end
+    frame.container = frame.panel
+    frame.container.exuiAutoSizeHeight = nil
+    frame.scrollable = false
+    frame.UpdateScroll = nil
+end
+
 local configure = function(frame)
     frame.tabs = {}
     frame.activeTabID = nil
@@ -65,12 +105,13 @@ local configure = function(frame)
     tabBar:SetHeight(30)
     frame.tabBar = tabBar
 
-    local container = EXFrames:GetFrame('panel-frame'):Create()
-    container:SetBackgroundColor(0.12, 0.12, 0.12, 0.8)
-    container:SetParent(frame)
-    container:SetPoint('TOPLEFT', tabBar, 'BOTTOMLEFT')
-    container:SetPoint('BOTTOMRIGHT')
-    frame.container = container
+    local panel = EXFrames:GetFrame('panel-frame'):Create()
+    panel:SetBackgroundColor(0.12, 0.12, 0.12, 0.8)
+    panel:SetParent(frame)
+    panel:SetPoint('TOPLEFT', tabBar, 'BOTTOMLEFT')
+    panel:SetPoint('BOTTOMRIGHT')
+    frame.panel = panel
+    frame.container = panel
 
     frame.onTabClick = function(self, id)
         frame.activeTabID = id
@@ -126,6 +167,7 @@ local configure = function(frame)
     end
 
     frame.Destroy = function(self)
+        ClearScrollable(self)
         self:ClearAllPoints()
         tabs.pool:Release(self)
     end
@@ -134,11 +176,18 @@ local configure = function(frame)
 end
 
 ---@param self ExalityFramesTabsFrame
+---@param options? {scrollable?: boolean}
 ---@return Frame
-tabs.Create = function(self)
+tabs.Create = function(self, options)
     local f = self.pool:Acquire()
     if not f.configured then
         configure(f)
+    end
+
+    if options and options.scrollable then
+        SetupScrollable(f)
+    else
+        ClearScrollable(f)
     end
 
     f:Show()

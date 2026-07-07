@@ -3,7 +3,7 @@ local _, ns = ...
 local EXFrames = ns.EXFrames
 
 ---@class ExalityFramesSplitOptionsScrollFrame
-local scrollFrame = EXFrames:GetFrame('scroll-frame')
+local scrollFrame = EXFrames:GetFrame('smooth-scroll-frame')
 
 --- @class ExalityFramesSplitOptionsFrame
 local splitOptions = EXFrames:GetFrame('split-options-frame')
@@ -73,7 +73,7 @@ local configure = function(f)
     local scrollFrame = scrollFrame:Create()
     scrollFrame:SetParent(rightPanel)
     scrollFrame:SetPoint('TOPLEFT', 5, -15)
-    scrollFrame:SetPoint('BOTTOMRIGHT', -30, 8)
+    scrollFrame:SetPoint('BOTTOMRIGHT', -5, 8)
     f.scrollFrame = scrollFrame
     f.container = scrollFrame.child
 
@@ -86,7 +86,14 @@ local configure = function(f)
     f.extraButton = extraButton
 
     f.UpdateScroll = function(self)
-        self.scrollFrame:UpdateScrollChild(self.rightPanel:GetWidth() - 50, self.rightPanel:GetHeight() - 25)
+        local width = math.max(1, self.rightPanel:GetWidth() - 15)
+        local viewportHeight = math.max(1, self.rightPanel:GetHeight() - 25)
+        local contentHeight = self.container:GetHeight()
+        if self.container.exuiAutoSizeHeight and contentHeight > 0 then
+            self.scrollFrame:UpdateScrollChild(width, math.max(contentHeight, viewportHeight))
+        else
+            self.scrollFrame:UpdateScrollChild(width, viewportHeight)
+        end
     end
 
     f.onItemClick = function(self, id)

@@ -18,6 +18,7 @@ local frame = EXFrames:GetFrame('frame-id')
 | Input Group         | `'input-group'`         |
 | Panel Frame         | `'panel-frame'`         |
 | Scroll Frame        | `'scroll-frame'`        |
+| Smooth Scroll Frame | `'smooth-scroll-frame'` |
 | Split Options Frame | `'split-options-frame'` |
 | Tabs Frame          | `'tabs-frame'`          |
 | Window Frame        | `'window-frame'`        |

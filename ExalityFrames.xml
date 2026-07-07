@@ -27,6 +27,7 @@
   <Script file="Frames/Window.lua" />
   <Script file="Frames/Panel.lua" />
   <Script file="Frames/ScrollFrame.lua" />
+  <Script file="Frames/SmoothScrollFrame.lua" />
   <Script file="Frames/InputGroup.lua" />
   <Script file="Frames/Inputs/CheckBox.lua" />
   <Script file="Frames/InputDialog.lua" />
