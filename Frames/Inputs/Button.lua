@@ -93,6 +93,13 @@ local function ConfigureFrame(f)
         end
         if (option.color) then
             self:SetColor(unpack(option.color))
+        else
+            self:SetColor(unpack(EXFrames.Theme.accent))
+        end
+        if (option.hoverColor) then
+            self.hoverTex:SetVertexColor(unpack(option.hoverColor))
+        else
+            self.hoverTex:SetVertexColor(unpack(EXFrames.Theme.accentLight))
         end
         if (option.icon) then
             self:SetIcon(option.icon.file, option.icon.width, option.icon.height)
@@ -139,6 +146,12 @@ button.Create = function(self, options, parent)
         f:SetColor(unpack(EXFrames.Theme.accent))
     end
 
+    if (options and options.hoverColor) then
+        f.hoverTex:SetVertexColor(unpack(options.hoverColor))
+    else
+        f.hoverTex:SetVertexColor(unpack(EXFrames.Theme.accentLight))
+    end
+
     if (options and options.onClick) then
         f.onClick = options.onClick
     end
@@ -151,6 +164,8 @@ button.Create = function(self, options, parent)
         self:ClearObservable()
         self.icon:SetTexture(nil)
         self.hoverTex:SetAlpha(0)
+        self.hoverTex:SetVertexColor(unpack(EXFrames.Theme.accentLight))
+        self:SetColor(unpack(EXFrames.Theme.accent))
         self.icon:SetSize(0, 0)
         button.pool:Release(self)
     end

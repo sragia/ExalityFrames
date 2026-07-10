@@ -455,7 +455,9 @@ ns.EXFrames.assets = {
     },
     icon = {
       close = BASE_PATH .. 'Assets\\Icon\\close.png',
+      closeBold = BASE_PATH .. 'Assets\\Icon\\close-bold.png',
       chevronDown = BASE_PATH .. 'Assets\\Icon\\chevronDown',
+      info = BASE_PATH .. 'Assets\\Icon\\info.png',
     },
     tabs = {
       active = BASE_PATH .. 'Assets\\Tabs\\active.png',

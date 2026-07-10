@@ -5,6 +5,9 @@ local EXFrames = ns.EXFrames
 ---@class ExalityFramesSplitOptionsScrollFrame
 local scrollFrame = EXFrames:GetFrame('smooth-scroll-frame')
 
+---@class ExalityFramesListMenu
+local listMenu = EXFrames:GetFrame('list-menu-frame')
+
 --- @class ExalityFramesSplitOptionsFrame
 local splitOptions = EXFrames:GetFrame('split-options-frame')
 
@@ -43,13 +46,39 @@ local function CreateItem(parent)
         self.text:SetText(text or "")
     end
 
-    button:SetScript('OnClick', function(self)
-        if (self.onItemClick) then
+    button:SetScript('OnClick', function(self, mouseButton)
+        if mouseButton == 'RightButton' then
+            if self.contextMenuItems and #self.contextMenuItems > 0 and self.onShowContextMenu then
+                self:onShowContextMenu()
+            end
+            return
+        end
+        if self.onItemClick then
             self:onItemClick(self.ID)
         end
     end)
 
+    button:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
+
     return button
+end
+
+local function buildContextMenuEntries(itemID, menuItems)
+    local entries = {}
+    for _, menuItem in ipairs(menuItems) do
+        table.insert(entries, {
+            text = menuItem.label or menuItem.text,
+            icon = menuItem.icon,
+            color = menuItem.color,
+            hoverColor = menuItem.hoverColor,
+            onClick = function(_, button)
+                if menuItem.onClick then
+                    menuItem.onClick(itemID, button)
+                end
+            end,
+        })
+    end
+    return entries
 end
 
 local configure = function(f)
@@ -97,6 +126,7 @@ local configure = function(f)
     end
 
     f.onItemClick = function(self, id)
+        listMenu:Hide()
         f.activeID = id
         for _, item in ipairs(f.items) do
             item:SetActive(item.ID == id)
@@ -104,6 +134,14 @@ local configure = function(f)
         if (f.onItemChange) then
             f.onItemChange(id)
         end
+    end
+
+    f.ShowItemContextMenu = function(self, button)
+        if not button or not button.contextMenuItems or #button.contextMenuItems == 0 then
+            return
+        end
+        local entries = buildContextMenuEntries(button.ID, button.contextMenuItems)
+        listMenu:ToggleAt(button, entries)
     end
 
     f.AddItems = function(self, items)
@@ -119,7 +157,11 @@ local configure = function(f)
             local button = self.items[i]
             button.ID = item.ID
             button:SetText(item.label)
+            button.contextMenuItems = item.contextMenuItems
             button.onItemClick = self.onItemClick
+            button.onShowContextMenu = function()
+                self:ShowItemContextMenu(button)
+            end
             if (not prev) then
                 button:SetPoint('TOPLEFT', leftPanel, 'TOPLEFT', 3, -5)
                 button:SetPoint('TOPRIGHT', leftPanel, 'TOPRIGHT', -3, -5)
@@ -136,7 +178,14 @@ local configure = function(f)
                 self.activeID = item.ID
             end
 
+            button:Show()
             prev = button
+        end
+
+        for i = #items + 1, #self.items do
+            self.items[i]:Hide()
+            self.items[i].contextMenuItems = nil
+            self.items[i].onShowContextMenu = nil
         end
     end
 
@@ -172,6 +221,7 @@ local configure = function(f)
     end
 
     f.Destroy = function(self)
+        listMenu:Hide()
         self.extraButton:Hide()
         self.activeID = nil
         if self.scrollFrame then

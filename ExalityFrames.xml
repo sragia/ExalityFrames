@@ -5,6 +5,7 @@
   <!-- Frame -->
   <Script file="Frames/Inputs/Tooltip.lua" />
   <Script file="Frames/Inputs/EditBox.lua" />
+  <Script file="Frames/Inputs/SpellIdInput.lua" />
   <Script file="Frames/Inputs/Range.lua" />
   <Script file="Frames/Inputs/Toggle.lua" />
   <Script file="Frames/Inputs/Button.lua" />
@@ -15,12 +16,14 @@
   <Script file="Frames/Inputs/Spacer.lua" />
   <Script file="Frames/Inputs/Title.lua" />
   <Script file="Frames/Inputs/Description.lua" /> 
+  <Script file="Frames/Inputs/Disclaimer.lua" />
   <Script file="Frames/Inputs/ColorPicker.lua" />
   <Script file="Frames/Inputs/SlimDropdown.lua" />
   <Script file="Frames/Inputs/AnchorPoint.lua" />
   <Script file="Frames/OptionFrames/ModuleItem.lua" />
   <Script file="Frames/OptionFrames/MenuItem.lua" />
   <Script file="Frames/Dialog.lua" />
+  <Script file="Frames/ListMenu.lua" />
   <Script file="Frames/SplitOptions.lua" />
   <Script file="Frames/Tabs.lua" />
   <Script file="Frames/WindowManager.lua" />
@@ -30,5 +33,6 @@
   <Script file="Frames/SmoothScrollFrame.lua" />
   <Script file="Frames/InputGroup.lua" />
   <Script file="Frames/Inputs/CheckBox.lua" />
+  <Script file="Frames/Inputs/TriStateCheckBox.lua" />
   <Script file="Frames/InputDialog.lua" />
 </Ui>
