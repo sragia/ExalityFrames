@@ -451,7 +451,11 @@ ns.EXFrames.assets = {
         base = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\base.png',
         hover = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\hover.png',
         mark = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\mark.png',
-      }
+      },
+      colorPicker = {
+        hueVertical = BASE_PATH .. 'Assets\\Inputs\\color-picker\\hue_vertical.png',
+        alphaChecker = BASE_PATH .. 'Assets\\Inputs\\color-picker\\alpha_checker.png',
+      },
     },
     icon = {
       close = BASE_PATH .. 'Assets\\Icon\\close.png',

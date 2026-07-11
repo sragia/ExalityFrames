@@ -47,14 +47,20 @@ local function ConfigureFrame(f)
     hoverTex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     hoverTex:SetAllPoints()
     hoverTex:SetAlpha(0)
+    hoverTex:Hide()
     f.hoverTex = hoverTex
 
     local onHover = EXFrames.utils.animation.fade(hoverTex, 0.1, 0, 1)
     local onLeave = EXFrames.utils.animation.fade(hoverTex, 0.1, 1, 0)
+    onLeave:SetScript('OnFinished', function(self)
+        hoverTex:Hide()
+    end)
     f.onHover = onHover
     f.onLeave = onLeave
 
     f:SetScript('OnEnter', function(self)
+        self.hoverTex:Show()
+        self.hoverTex:SetAlpha(0)
         onHover:Play()
     end)
 

@@ -8,6 +8,28 @@ local windowManager = EXFrames:GetFrame('window-manager')
 windowManager.activeWindows = {}
 
 windowManager.windowMargin = 20
+windowManager.baseFrameLevel = 100
+windowManager.frameLevelStep = 50
+
+---Assign the next stacked frame level so overlapping windows render predictably.
+---@param self ExalityFramesWindowManager
+---@param window Frame
+windowManager.RaiseWindow = function(self, window)
+    local highest = self.baseFrameLevel - self.frameLevelStep
+    for _, activeWindow in ipairs(self.activeWindows) do
+        if activeWindow:IsShown() and activeWindow ~= window then
+            local level = activeWindow:GetFrameLevel()
+            if level > highest then
+                highest = level
+            end
+        end
+    end
+    local level = highest + self.frameLevelStep
+    if window:GetFrameLevel() == level then
+        return
+    end
+    window:SetFrameLevel(level)
+end
 
 ---@param self ExalityFramesWindowManager
 ---@param window Frame
