@@ -11,8 +11,6 @@ range.Init = function(self)
     self.pool = CreateFramePool('Frame', UIParent)
 end
 
-local TRACK_INSET = 4
-
 local function formatValue(value)
     if value % 1 == 0 then
         return string.format('%.0f', value)
@@ -28,10 +26,12 @@ local function ConfigureFrame(f)
     f.max = 100
     f.value = 0
     f.suppressOnChange = false
+    f.trackInset = EXFrames:ScalePixel(4, f)
+    f.buttonWidth = EXFrames:ScalePixel(20, f)
 
     -- Bar container (same positioning as EditBox inner input)
     local bar = CreateFrame('Frame', nil, f)
-    bar:SetPoint('TOPLEFT', 0, -12)
+    bar:SetPoint('TOPLEFT', 0, -EXFrames:ScalePixel(12, f))
     bar:SetPoint('BOTTOMRIGHT')
     bar:EnableMouse(true)
     f.bar = bar
@@ -63,14 +63,26 @@ local function ConfigureFrame(f)
     fillTex:SetAllPoints()
     f.fillFrame = fillFrame
 
-    -- Spark: visual-only Frame — bar handles all mouse events so hover stays reliable
-    local spark = CreateFrame('Frame', nil, bar)
-    spark:SetSize(1, 1)
-    spark:SetPoint('CENTER', bar, 'LEFT', TRACK_INSET, 0)
-    local sparkTex = spark:CreateTexture(nil, 'OVERLAY')
-    sparkTex:SetColorTexture(1, 1, 1, 0.85)
-    sparkTex:SetAllPoints()
-    f.spark = spark
+    -- Spark: pixel-aligned vertical line texture (no mouse capture; bar handles input)
+    local sparkTex = bar:CreateTexture(nil, 'OVERLAY', nil, 5)
+    sparkTex:SetTexture(EXFrames.assets.textures.solidWhite)
+    sparkTex:SetVertexColor(1, 1, 1, 0.85)
+    sparkTex:SetSnapToPixelGrid(true)
+    sparkTex:SetTexelSnappingBias(0)
+    f.sparkTex = sparkTex
+    f.sparkThickness = 1
+
+    f.ApplySparkLayout = function(self, sparkX)
+        local thickness = self.sparkThickness or 1
+        local x = EXFrames:ScalePixel(sparkX, bar)
+        local w = EXFrames:ScalePixels(thickness, bar)
+        local minFill = EXFrames:ScalePixels(1, bar)
+        sparkTex:ClearAllPoints()
+        sparkTex:SetPoint('TOPLEFT', bar, 'TOPLEFT', x, 0)
+        sparkTex:SetPoint('BOTTOMLEFT', bar, 'BOTTOMLEFT', x, 0)
+        sparkTex:SetWidth(w)
+        fillFrame:SetWidth(math.max(minFill, x))
+    end
 
     -- Overlay frame so value text renders above the border texture
     local overlayFrame = CreateFrame('Frame', nil, bar)
@@ -97,7 +109,7 @@ local function ConfigureFrame(f)
     -- Label above bar (same pattern as EditBox)
     local label = f:CreateFontString(nil, 'OVERLAY')
     label:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
-    label:SetPoint('BOTTOMLEFT', bar, 'TOPLEFT', 0, 3)
+    label:SetPoint('BOTTOMLEFT', bar, 'TOPLEFT', 0, EXFrames:ScalePixel(3, f))
     label:SetWidth(0)
     f.label = label
 
@@ -106,7 +118,7 @@ local function ConfigureFrame(f)
     local leftBtn = CreateFrame('Frame', nil, bar)
     leftBtn:SetPoint('TOPLEFT', bar, 'TOPLEFT')
     leftBtn:SetPoint('BOTTOMLEFT', bar, 'BOTTOMLEFT')
-    leftBtn:SetWidth(20)
+    leftBtn:SetWidth(f.buttonWidth)
     leftBtn:Hide()
     local leftBtnText = leftBtn:CreateFontString(nil, 'OVERLAY')
     leftBtnText:SetFont(EXFrames.assets.font.default(), 14, 'OUTLINE')
@@ -117,7 +129,7 @@ local function ConfigureFrame(f)
     local rightBtn = CreateFrame('Frame', nil, bar)
     rightBtn:SetPoint('TOPRIGHT', bar, 'TOPRIGHT')
     rightBtn:SetPoint('BOTTOMRIGHT', bar, 'BOTTOMRIGHT')
-    rightBtn:SetWidth(20)
+    rightBtn:SetWidth(f.buttonWidth)
     rightBtn:Hide()
     local rightBtnText = rightBtn:CreateFontString(nil, 'OVERLAY')
     rightBtnText:SetFont(EXFrames.assets.font.default(), 14, 'OUTLINE')
@@ -129,7 +141,8 @@ local function ConfigureFrame(f)
         setBorderActive(true)
         leftBtn:Show()
         rightBtn:Show()
-        spark:SetWidth(EXFrames:ScalePixel(2))
+        f.sparkThickness = 2
+        f:UpdateSparkPosition()
     end
 
     local function hideHover()
@@ -138,7 +151,8 @@ local function ConfigureFrame(f)
         end
         leftBtn:Hide()
         rightBtn:Hide()
-        spark:SetWidth(EXFrames:ScalePixel(1))
+        f.sparkThickness = 1
+        f:UpdateSparkPosition()
     end
 
     -- bar is the sole mouse-capturing frame, so OnEnter/OnLeave are reliable
@@ -150,6 +164,9 @@ local function ConfigureFrame(f)
 
     bar:HookScript('OnSizeChanged', function()
         f:UpdateSparkPosition()
+        if bar.PPBorder then
+            bar.PPBorder:SetBorderThickness(bar.PPBorder.thicknessPixels or 1)
+        end
     end)
 
     local function getBarLocalX()
@@ -160,7 +177,7 @@ local function ConfigureFrame(f)
         if button ~= 'LeftButton' then return end
         local localX = getBarLocalX()
         local barWidth = bar:GetWidth()
-        if localX > 20 and localX < barWidth - 20 then
+        if localX > f.buttonWidth and localX < barWidth - f.buttonWidth then
             f.isDragging = true
         end
     end)
@@ -169,14 +186,11 @@ local function ConfigureFrame(f)
         if not f.isDragging then return end
         local localX = getBarLocalX()
         local barWidth = bar:GetWidth()
-        localX = math.max(TRACK_INSET, math.min(barWidth - TRACK_INSET, localX))
+        localX = math.max(f.trackInset, math.min(barWidth - f.trackInset, localX))
+        f:ApplySparkLayout(localX)
 
-        spark:ClearAllPoints()
-        spark:SetPoint('CENTER', bar, 'LEFT', localX, 0)
-        fillFrame:SetWidth(math.max(1, localX))
-
-        local trackWidth = barWidth - TRACK_INSET * 2
-        local perc = (localX - TRACK_INSET) / trackWidth
+        local trackWidth = barWidth - f.trackInset * 2
+        local perc = (localX - f.trackInset) / trackWidth
         local rawValue = f.min + perc * (f.max - f.min)
         local step = f.step or 1
         local value = f.min + math.floor((rawValue - f.min) / step + 0.5) * step
@@ -209,10 +223,10 @@ local function ConfigureFrame(f)
 
         local localX = getBarLocalX()
         local barWidth = bar:GetWidth()
-        if localX <= 20 then
+        if localX <= f.buttonWidth then
             local newValue = f.value - f.step
             if newValue >= f.min then f:SetValue('value', newValue) end
-        elseif localX >= barWidth - 20 then
+        elseif localX >= barWidth - f.buttonWidth then
             local newValue = f.value + f.step
             if newValue <= f.max then f:SetValue('value', newValue) end
         end
@@ -254,20 +268,22 @@ local function ConfigureFrame(f)
     f.SetFrameWidth = function(self, width)
         self:SetWidth(width)
         self:UpdateSparkPosition()
+        C_Timer.After(0, function()
+            if self:IsShown() then
+                self:UpdateSparkPosition()
+            end
+        end)
     end
 
     f.UpdateSparkPosition = function(self)
         local barWidth = bar:GetWidth()
         if barWidth < 1 then return end
-        local barHeight = bar:GetHeight()
-        local trackWidth = barWidth - TRACK_INSET * 2
+        local trackWidth = barWidth - self.trackInset * 2
+        if trackWidth < 1 then return end
         local rangeSpan = self.max - self.min
         local perc = rangeSpan > 0 and math.max(0, math.min(1, (self.value - self.min) / rangeSpan)) or 0
-        local sparkX = TRACK_INSET + perc * trackWidth
-        spark:ClearAllPoints()
-        spark:SetPoint('CENTER', bar, 'LEFT', sparkX, 0)
-        spark:SetSize(EXFrames:ScalePixel(1), EXFrames:ScalePixel(math.max(1, barHeight)))
-        fillFrame:SetWidth(math.max(1, sparkX))
+        local sparkX = self.trackInset + perc * trackWidth
+        self:ApplySparkLayout(sparkX)
     end
 
     f.ResetForAcquire = function(self)
@@ -278,16 +294,25 @@ local function ConfigureFrame(f)
         self.step = 1
         self.value = 0
         self.optionData = nil
+        self.sparkThickness = 1
+        self.trackInset = EXFrames:ScalePixel(4, self)
+        self.buttonWidth = EXFrames:ScalePixel(20, self)
+        leftBtn:SetWidth(self.buttonWidth)
+        rightBtn:SetWidth(self.buttonWidth)
         editBox:Hide()
         editBox:ClearFocus()
         valueText:Show()
         valueText:SetText('')
-        spark:ClearAllPoints()
-        spark:SetPoint('CENTER', bar, 'LEFT', TRACK_INSET, 0)
-        fillFrame:SetWidth(1)
+        fillFrame:SetWidth(EXFrames:ScalePixels(1, bar))
+        self:ApplySparkLayout(self.trackInset)
     end
 
     f.SetState = function(self, value)
+        if self.optionData then
+            self.min = self.optionData.min or 0
+            self.max = self.optionData.max or 100
+            self.step = self.optionData.step or 1
+        end
         self.suppressOnChange = true
         self:SetValue('value', value)
         self.suppressOnChange = false

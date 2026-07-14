@@ -89,34 +89,54 @@ local configure = function(f)
     local leftPanel = EXFrames:GetFrame('panel-frame'):Create()
     leftPanel:SetBackgroundColor(0.05, 0.05, 0.05, 0.8)
     leftPanel:SetParent(f)
-    leftPanel:SetPoint('TOPLEFT', 5, -5)
-    leftPanel:SetPoint('BOTTOMRIGHT', f, 'BOTTOMLEFT', 135, 5)
+    f.leftPanel = leftPanel
 
     local rightPanel = EXFrames:GetFrame('panel-frame'):Create()
     rightPanel:SetBackgroundColor(0.05, 0.05, 0.05, 0.8)
     rightPanel:SetParent(f)
-    rightPanel:SetPoint('TOPLEFT', leftPanel, 'TOPRIGHT', 5, 0)
-    rightPanel:SetPoint('BOTTOMRIGHT', -5, 5)
     f.rightPanel = rightPanel
+
+    f.ApplyPanelLayout = function(self)
+        local panelInset = EXFrames:ScalePixel(5, self)
+        local leftWidth = EXFrames:ScalePixel(135, self)
+        local scrollTopInset = EXFrames:ScalePixel(15, self.rightPanel)
+        local scrollBottomInset = EXFrames:ScalePixel(8, self.rightPanel)
+        local scrollSideInset = EXFrames:ScalePixel(5, self.rightPanel)
+
+        self.leftPanel:ClearAllPoints()
+        self.leftPanel:SetPoint('TOPLEFT', panelInset, -panelInset)
+        self.leftPanel:SetPoint('BOTTOMRIGHT', self, 'BOTTOMLEFT', leftWidth, panelInset)
+
+        self.rightPanel:ClearAllPoints()
+        self.rightPanel:SetPoint('TOPLEFT', self.leftPanel, 'TOPRIGHT', panelInset, 0)
+        self.rightPanel:SetPoint('BOTTOMRIGHT', -panelInset, panelInset)
+
+        self.scrollFrame:ClearAllPoints()
+        self.scrollFrame:SetPoint('TOPLEFT', scrollSideInset, -scrollTopInset)
+        self.scrollFrame:SetPoint('BOTTOMRIGHT', -scrollSideInset, scrollBottomInset)
+
+        local extraInset = EXFrames:ScalePixel(5, self.leftPanel)
+        self.extraButton:ClearAllPoints()
+        self.extraButton:SetPoint('BOTTOMLEFT', self.leftPanel, 'BOTTOMLEFT', extraInset, extraInset)
+        self.extraButton:SetPoint('BOTTOMRIGHT', self.leftPanel, 'BOTTOMRIGHT', -extraInset, extraInset)
+    end
 
     local scrollFrame = scrollFrame:Create()
     scrollFrame:SetParent(rightPanel)
-    scrollFrame:SetPoint('TOPLEFT', 5, -15)
-    scrollFrame:SetPoint('BOTTOMRIGHT', -5, 8)
     f.scrollFrame = scrollFrame
     f.container = scrollFrame.child
 
     local extraButton = EXFrames:GetFrame('button'):Create()
-    extraButton:SetHeight(30)
+    extraButton:SetHeight(EXFrames:ScalePixel(30, f))
     extraButton:SetParent(leftPanel)
-    extraButton:SetPoint('BOTTOMLEFT', leftPanel, 'BOTTOMLEFT', 5, 5)
-    extraButton:SetPoint('BOTTOMRIGHT', leftPanel, 'BOTTOMRIGHT', -5, 5)
     extraButton:Hide()
     f.extraButton = extraButton
 
+    f:ApplyPanelLayout()
+
     f.UpdateScroll = function(self)
-        local width = math.max(1, self.rightPanel:GetWidth() - 15)
-        local viewportHeight = math.max(1, self.rightPanel:GetHeight() - 25)
+        local width = math.max(1, EXFrames:ScalePixel(self.rightPanel:GetWidth() - 15, self.rightPanel))
+        local viewportHeight = math.max(1, EXFrames:ScalePixel(self.rightPanel:GetHeight() - 25, self.rightPanel))
         local contentHeight = self.container:GetHeight()
         if self.container.exuiAutoSizeHeight and contentHeight > 0 then
             self.scrollFrame:UpdateScrollChild(width, math.max(contentHeight, viewportHeight))
@@ -145,14 +165,17 @@ local configure = function(f)
     end
 
     f.AddItems = function(self, items)
+        self:ApplyPanelLayout()
         for _, item in ipairs_reverse(self.items) do
             item:ClearAllPoints()
         end
         local prev = nil
-        local itemGap = EXFrames:ScalePixel(3, leftPanel)
+        local itemGap = EXFrames:ScalePixel(3, self.leftPanel)
+        local itemInsetX = EXFrames:ScalePixel(3, self.leftPanel)
+        local itemInsetTop = EXFrames:ScalePixel(5, self.leftPanel)
         for i, item in ipairs(items) do
             if (not self.items[i]) then
-                self.items[i] = CreateItem(leftPanel)
+                self.items[i] = CreateItem(self.leftPanel)
             end
             local button = self.items[i]
             button.ID = item.ID
@@ -163,8 +186,8 @@ local configure = function(f)
                 self:ShowItemContextMenu(button)
             end
             if (not prev) then
-                button:SetPoint('TOPLEFT', leftPanel, 'TOPLEFT', 3, -5)
-                button:SetPoint('TOPRIGHT', leftPanel, 'TOPRIGHT', -3, -5)
+                button:SetPoint('TOPLEFT', self.leftPanel, 'TOPLEFT', itemInsetX, -itemInsetTop)
+                button:SetPoint('TOPRIGHT', self.leftPanel, 'TOPRIGHT', -itemInsetX, -itemInsetTop)
             else
                 button:SetActive(false)
                 button:SetPoint('TOPLEFT', prev, 'BOTTOMLEFT', 0, -itemGap)
@@ -186,6 +209,10 @@ local configure = function(f)
             self.items[i]:Hide()
             self.items[i].contextMenuItems = nil
             self.items[i].onShowContextMenu = nil
+        end
+
+        if EXFrames.RefreshPixelPerfect then
+            EXFrames:RefreshPixelPerfect()
         end
     end
 

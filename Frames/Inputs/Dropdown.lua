@@ -357,8 +357,9 @@ local function ConfigureFrame(f, options)
     f.options = options.options
 
     if (not f.inputArea) then
+        local labelOffset = EXFrames:ScalePixel(12, f)
         local inputArea = CreateFrame('Frame', nil, f)
-        inputArea:SetPoint('TOPLEFT', 0, -12)
+        inputArea:SetPoint('TOPLEFT', 0, -labelOffset)
         inputArea:SetPoint('BOTTOMRIGHT')
         f.inputArea = inputArea
 
@@ -371,6 +372,12 @@ local function ConfigureFrame(f, options)
         f.texture = tex
 
         EXFrames:ApplyInputBorder(inputArea, 1)
+
+        inputArea:HookScript('OnSizeChanged', function()
+            if inputArea.PPBorder then
+                inputArea.PPBorder:SetBorderThickness(inputArea.PPBorder.thicknessPixels or 1)
+            end
+        end)
 
         local overlayFrame = CreateFrame('Frame', nil, inputArea)
         overlayFrame:SetAllPoints()

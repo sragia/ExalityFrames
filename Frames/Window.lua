@@ -28,11 +28,23 @@ local configure = function(frame)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
     frame:EnableMouse(true)
+    local function refreshWindowPixelPerfect(windowFrame)
+        if EXFrames.config.snapFrame then
+            EXFrames.config.snapFrame(windowFrame)
+        end
+        if EXFrames.RefreshPixelPerfect then
+            EXFrames:RefreshPixelPerfect()
+        end
+    end
+
     frame:SetScript("OnDragStart", function(self)
         windowManager:RaiseWindow(self)
         self:StartMoving()
     end)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        refreshWindowPixelPerfect(self)
+    end)
     frame:SetClampedToScreen(true)
     frame:SetFrameStrata("DIALOG")
     frame:SetFrameLevel(windowManager.baseFrameLevel)
@@ -145,6 +157,9 @@ local configure = function(frame)
         resizeBtn:SetNormalTexture(EXFrames.assets.textures.window.resizeBtn)
         resizeBtn:SetHighlightTexture(EXFrames.assets.textures.window.resizeBtnHighlight)
         resizeBtn:Init(frame, 500, 500, 500, 1200);
+        resizeBtn:SetOnResizeStoppedCallback(function(target)
+            refreshWindowPixelPerfect(target)
+        end)
     end
 
     if (not frame.close) then

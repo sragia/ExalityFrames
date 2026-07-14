@@ -46,10 +46,18 @@ ns.EXFrames.RefreshPixelPerfect = function(self)
   for i = #self.pixelPerfectBackdrops, 1, -1 do
     local entry = self.pixelPerfectBackdrops[i]
     if entry.frame and entry.frame.SetBackdrop then
-      if self.config.snapFrame then
+      if self.config.snapFrame and entry.frame:GetNumPoints() == 1 then
         self.config.snapFrame(entry.frame)
       end
+      local bgR, bgG, bgB, bgA = entry.frame:GetBackdropColor()
+      local borderR, borderG, borderB, borderA = entry.frame:GetBackdropBorderColor()
       entry.frame:SetBackdrop(self.assets.backdrop.pixelPerfect(entry.borderSize, entry.frame))
+      if bgR then
+        entry.frame:SetBackdropColor(bgR, bgG, bgB, bgA)
+      end
+      if borderR then
+        entry.frame:SetBackdropBorderColor(borderR, borderG, borderB, borderA)
+      end
     else
       table.remove(self.pixelPerfectBackdrops, i)
     end
@@ -87,6 +95,9 @@ ns.EXFrames.RefreshInputBorders = function(self)
   for i = #self.inputBorders, 1, -1 do
     local frame = self.inputBorders[i]
     if frame and frame.PPBorder then
+      if self.config.snapFrame and frame:GetNumPoints() == 1 then
+        self.config.snapFrame(frame)
+      end
       frame.PPBorder:SetBorderThickness(frame.PPBorder.thicknessPixels or 1)
     else
       table.remove(self.inputBorders, i)
