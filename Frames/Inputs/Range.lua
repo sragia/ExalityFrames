@@ -11,6 +11,15 @@ range.Init = function(self)
     self.pool = CreateFramePool('Frame', UIParent)
 end
 
+local TRACK_INSET = 4
+
+local function formatValue(value)
+    if value % 1 == 0 then
+        return string.format('%.0f', value)
+    end
+    return string.format('%.2f', value)
+end
+
 local function ConfigureFrame(f)
     EXFrames.utils.addObserver(f)
     f:SetSize(200, 32)
@@ -18,12 +27,7 @@ local function ConfigureFrame(f)
     f.min = 0
     f.max = 100
     f.value = 0
-
-    hooksecurefunc(f, 'SetPoint', function(self)
-        C_Timer.After(0.01, function()
-            self:UpdateSparkPosition()
-        end)
-    end)
+    f.suppressOnChange = false
 
     -- Bar container (same positioning as EditBox inner input)
     local bar = CreateFrame('Frame', nil, f)
@@ -62,7 +66,7 @@ local function ConfigureFrame(f)
     -- Spark: visual-only Frame — bar handles all mouse events so hover stays reliable
     local spark = CreateFrame('Frame', nil, bar)
     spark:SetSize(1, 1)
-    spark:SetPoint('CENTER', bar, 'LEFT', 0, 0)
+    spark:SetPoint('CENTER', bar, 'LEFT', TRACK_INSET, 0)
     local sparkTex = spark:CreateTexture(nil, 'OVERLAY')
     sparkTex:SetColorTexture(1, 1, 1, 0.85)
     sparkTex:SetAllPoints()
@@ -144,6 +148,10 @@ local function ConfigureFrame(f)
         hideHover()
     end)
 
+    bar:HookScript('OnSizeChanged', function()
+        f:UpdateSparkPosition()
+    end)
+
     local function getBarLocalX()
         return GetCursorPosition() / bar:GetEffectiveScale() - bar:GetLeft()
     end
@@ -161,15 +169,14 @@ local function ConfigureFrame(f)
         if not f.isDragging then return end
         local localX = getBarLocalX()
         local barWidth = bar:GetWidth()
-        local inset = 4
-        localX = math.max(inset, math.min(barWidth - inset, localX))
+        localX = math.max(TRACK_INSET, math.min(barWidth - TRACK_INSET, localX))
 
         spark:ClearAllPoints()
         spark:SetPoint('CENTER', bar, 'LEFT', localX, 0)
         fillFrame:SetWidth(math.max(1, localX))
 
-        local trackWidth = barWidth - inset * 2
-        local perc = (localX - inset) / trackWidth
+        local trackWidth = barWidth - TRACK_INSET * 2
+        local perc = (localX - TRACK_INSET) / trackWidth
         local rawValue = f.min + perc * (f.max - f.min)
         local step = f.step or 1
         local value = f.min + math.floor((rawValue - f.min) / step + 0.5) * step
@@ -177,23 +184,13 @@ local function ConfigureFrame(f)
 
         if value ~= f.value then
             f.value = value
-            if value % 1 == 0 then
-                valueText:SetText(string.format('%.0f', value))
-            else
-                valueText:SetText(string.format('%.2f', value))
-            end
+            valueText:SetText(formatValue(value))
         end
     end)
 
     bar:SetScript('OnMouseUp', function(_, button)
         if button == 'RightButton' then
-            local displayValue
-            if f.value % 1 == 0 then
-                displayValue = string.format('%.0f', f.value)
-            else
-                displayValue = string.format('%.2f', f.value)
-            end
-            editBox:SetText(displayValue)
+            editBox:SetText(formatValue(f.value))
             editBox:Show()
             editBox:SetFocus()
             valueText:Hide()
@@ -231,11 +228,7 @@ local function ConfigureFrame(f)
         if not bar:IsMouseOver() then
             setBorderActive(false)
         end
-        if f.value % 1 == 0 then
-            valueText:SetText(string.format('%.0f', f.value))
-        else
-            valueText:SetText(string.format('%.2f', f.value))
-        end
+        valueText:SetText(formatValue(f.value))
     end)
 
     editBox:SetScript('OnEnterPressed', function(self)
@@ -260,9 +253,45 @@ local function ConfigureFrame(f)
 
     f.SetFrameWidth = function(self, width)
         self:SetWidth(width)
-        C_Timer.After(0.2, function()
-            self:UpdateSparkPosition()
-        end)
+        self:UpdateSparkPosition()
+    end
+
+    f.UpdateSparkPosition = function(self)
+        local barWidth = bar:GetWidth()
+        if barWidth < 1 then return end
+        local barHeight = bar:GetHeight()
+        local trackWidth = barWidth - TRACK_INSET * 2
+        local rangeSpan = self.max - self.min
+        local perc = rangeSpan > 0 and math.max(0, math.min(1, (self.value - self.min) / rangeSpan)) or 0
+        local sparkX = TRACK_INSET + perc * trackWidth
+        spark:ClearAllPoints()
+        spark:SetPoint('CENTER', bar, 'LEFT', sparkX, 0)
+        spark:SetSize(EXFrames:ScalePixel(1), EXFrames:ScalePixel(math.max(1, barHeight)))
+        fillFrame:SetWidth(math.max(1, sparkX))
+    end
+
+    f.ResetForAcquire = function(self)
+        self.isDragging = false
+        self.suppressOnChange = false
+        self.min = 0
+        self.max = 100
+        self.step = 1
+        self.value = 0
+        self.optionData = nil
+        editBox:Hide()
+        editBox:ClearFocus()
+        valueText:Show()
+        valueText:SetText('')
+        spark:ClearAllPoints()
+        spark:SetPoint('CENTER', bar, 'LEFT', TRACK_INSET, 0)
+        fillFrame:SetWidth(1)
+    end
+
+    f.SetState = function(self, value)
+        self.suppressOnChange = true
+        self:SetValue('value', value)
+        self.suppressOnChange = false
+        self:UpdateSparkPosition()
     end
 
     f.SetOptionData = function(self, option)
@@ -271,23 +300,11 @@ local function ConfigureFrame(f)
         self.max = option.max or 100
         self.step = option.step or 1
         self:SetLabel(option.label)
-        if option.currentValue then
-            self:SetValue('value', option.currentValue())
-        end
-    end
-
-    f.UpdateSparkPosition = function(self)
-        local barWidth = bar:GetWidth()
-        if barWidth < 1 then return end
-        local barHeight = bar:GetHeight()
-        local inset = 4
-        local trackWidth = barWidth - inset * 2
-        local perc = math.max(0, math.min(1, (self.value - self.min) / (self.max - self.min)))
-        local sparkX = inset + perc * trackWidth
-        spark:ClearAllPoints()
-        spark:SetPoint('CENTER', bar, 'LEFT', sparkX, 0)
-        spark:SetSize(EXFrames:ScalePixel(1), EXFrames:ScalePixel(math.max(1, barHeight)))
-        fillFrame:SetWidth(math.max(1, sparkX))
+        self.suppressOnChange = true
+        local value = option.currentValue and option.currentValue() or self.min
+        self:SetValue('value', value)
+        self.suppressOnChange = false
+        self:UpdateSparkPosition()
     end
 
     f.SetOnChange = function(self, onChange)
@@ -297,12 +314,8 @@ local function ConfigureFrame(f)
     f:Observe('value', function(value)
         f:UpdateSparkPosition()
         if not value or (type(value) ~= 'number' and type(value) ~= 'string') then return end
-        if value % 1 == 0 then
-            valueText:SetText(string.format('%.0f', value))
-        else
-            valueText:SetText(string.format('%.2f', value))
-        end
-        if f.OnChange and not f.isDragging then
+        valueText:SetText(formatValue(value))
+        if f.OnChange and not f.isDragging and not f.suppressOnChange then
             f.OnChange(value)
         end
     end)
@@ -319,8 +332,11 @@ range.Create = function(self)
     end
 
     f.onChange = nil
+    f.OnChange = nil
+    f:ResetForAcquire()
 
     f.Destroy = function(self)
+        self:ResetForAcquire()
         range.pool:Release(self)
     end
 

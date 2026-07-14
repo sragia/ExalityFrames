@@ -210,7 +210,7 @@ local function ConfigureFrame(f)
 
     local pickerBg = picker:CreateTexture(nil, "BACKGROUND")
     pickerBg:SetAllPoints()
-    pickerBg:SetTexture(EXFrames.assets.textures.ui.panelBg)
+    pickerBg:SetTexture(EXFrames.assets.textures.solidWhiteTexture)
     pickerBg:SetTextureSliceMargins(12, 12, 12, 12)
     pickerBg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     pickerBg:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
@@ -680,10 +680,10 @@ local function ConfigureFrame(f)
 
     f.SetOptionData = function(self, option)
         self.optionData = option
-        self.onChange = option.onChange
         self.hasOpacity = option.hasOpacity ~= false and option.disableAlpha ~= true
         self:SetLabel(option.label)
         self:SetValue("color", option.currentValue and option.currentValue() or { r = 1, g = 1, b = 1, a = 1 })
+        self.onChange = option.onChange
     end
 
     f:SetScript('OnClick', function(self)
