@@ -10,6 +10,8 @@ smoothScrollFrame.pool = {}
 local SCROLL_STEP = 40
 local SMOOTH_SPEED = 16
 local MIN_THUMB_HEIGHT = 24
+-- Ignore sub-pixel / rounding overflow so the bar does not appear when content fits.
+local SCROLL_OVERFLOW_EPSILON = 1
 
 local function MeasureContentHeight(container)
     local containerTop = container:GetTop()
@@ -43,7 +45,26 @@ end
 local function GetMaxScroll(f)
     local viewportHeight = f.content:GetHeight()
     local contentHeight = f.child:GetHeight()
-    return math.max(0, contentHeight - viewportHeight)
+    local overflow = contentHeight - viewportHeight
+    if overflow <= SCROLL_OVERFLOW_EPSILON then
+        return 0
+    end
+    return overflow
+end
+
+local function GetScrollbarSpace(f)
+    return f.scrollbarWidth + f.scrollbarPadding * 2
+end
+
+local function SyncChildWidth(f, preferredWidth)
+    local maxScroll = GetMaxScroll(f)
+    local scrollbarSpace = maxScroll > 0 and GetScrollbarSpace(f) or 0
+    local availableWidth = math.max(1, f:GetWidth() - scrollbarSpace)
+    local width = preferredWidth and math.min(preferredWidth, availableWidth) or availableWidth
+    if math.abs(f.child:GetWidth() - width) > 0.5 then
+        f.child:SetWidth(width)
+    end
+    return width
 end
 
 local function UpdateThumbPosition(f)
@@ -129,20 +150,21 @@ local function EnsureOnUpdate(f)
 end
 
 local function UpdateContentInsets(f)
-    local scrollbarWidth = f.scrollbarWidth
-    local padding = f.scrollbarPadding
     local maxScroll = GetMaxScroll(f)
 
     f.content:ClearAllPoints()
     if maxScroll > 0 then
         f.scrollBar:Show()
         f.content:SetPoint('TOPLEFT', 0, 0)
-        f.content:SetPoint('BOTTOMRIGHT', -(scrollbarWidth + padding * 2), 0)
+        f.content:SetPoint('BOTTOMRIGHT', -GetScrollbarSpace(f), 0)
     else
         f.scrollBar:Hide()
         f.content:SetPoint('TOPLEFT', 0, 0)
         f.content:SetPoint('BOTTOMRIGHT', 0, 0)
     end
+
+    -- Keep the scroll child inside the content viewport so rows do not sit under the bar.
+    SyncChildWidth(f, f.preferredChildWidth)
 end
 
 local function ConfigureFrame(f)
@@ -263,15 +285,24 @@ local function ConfigureFrame(f)
     end
 
     f.UpdateScrollChild = function(self, width, height)
-        self.child:SetWidth(width)
+        self.preferredChildWidth = width
+
+        -- Measure against the full viewport first so bar visibility is not based on an already-inset width.
+        self.scrollBar:Hide()
+        self.content:ClearAllPoints()
+        self.content:SetPoint('TOPLEFT', 0, 0)
+        self.content:SetPoint('BOTTOMRIGHT', 0, 0)
+
         if height then
             self.child:SetHeight(height)
         end
 
         local measuredHeight = MeasureContentHeight(self.child)
-        if measuredHeight > self.child:GetHeight() then
+        if measuredHeight > self.child:GetHeight() + SCROLL_OVERFLOW_EPSILON then
             self.child:SetHeight(measuredHeight)
         end
+
+        SyncChildWidth(self, width)
 
         local maxScroll = GetMaxScroll(self)
         self.targetScroll = math.min(self.targetScroll, maxScroll)
@@ -298,6 +329,7 @@ local function ConfigureFrame(f)
         self.smoothUpdateActive = false
         self.scrollOffset = 0
         self.targetScroll = 0
+        self.preferredChildWidth = nil
         if self.child then
             self.child:SetSize(1, 1)
             self.child:ClearAllPoints()

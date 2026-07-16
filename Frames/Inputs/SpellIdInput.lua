@@ -38,16 +38,21 @@ end
 local function relayoutOptionsGrid()
     C_Timer.After(0, function()
         local optionsFields = EXUI:GetModule('options-fields')
-        if not optionsFields or not optionsFields.fields or not optionsFields.container then
-            return
+        if optionsFields and optionsFields.fields and optionsFields.container then
+            EXUI.utils.organizeFramesInGrid('fields', optionsFields.fields, 10, optionsFields.container, 10, 10)
+            if optionsFields.splitView and optionsFields.container == optionsFields.splitView.container and optionsFields.splitView.UpdateScroll then
+                optionsFields.splitView:UpdateScroll()
+            elseif optionsFields.innerTabs and optionsFields.innerTabs.scrollable and optionsFields.innerTabs.UpdateScroll and optionsFields.container == optionsFields.innerTabs.container then
+                optionsFields.innerTabs:UpdateScroll()
+            elseif optionsFields.tabs and optionsFields.tabs.scrollable and optionsFields.tabs.UpdateScroll and optionsFields.container == optionsFields.tabs.container then
+                optionsFields.tabs:UpdateScroll()
+            end
         end
-        EXUI.utils.organizeFramesInGrid('fields', optionsFields.fields, 10, optionsFields.container, 10, 10)
-        if optionsFields.splitView and optionsFields.container == optionsFields.splitView.container and optionsFields.splitView.UpdateScroll then
-            optionsFields.splitView:UpdateScroll()
-        elseif optionsFields.innerTabs and optionsFields.innerTabs.scrollable and optionsFields.innerTabs.UpdateScroll and optionsFields.container == optionsFields.innerTabs.container then
-            optionsFields.innerTabs:UpdateScroll()
-        elseif optionsFields.tabs and optionsFields.tabs.scrollable and optionsFields.tabs.UpdateScroll and optionsFields.container == optionsFields.tabs.container then
-            optionsFields.tabs:UpdateScroll()
+
+        -- Unit Frame Aura Editor hosts its own field grid outside options-fields.
+        local auraEditor = EXUI:GetModule('uf-aura-editor')
+        if auraEditor and auraEditor.RelayoutFields then
+            auraEditor:RelayoutFields()
         end
     end)
 end

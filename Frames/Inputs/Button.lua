@@ -108,12 +108,21 @@ local function ConfigureFrame(f)
             self.hoverTex:SetVertexColor(unpack(EXFrames.Theme.accentLight))
         end
         if (option.icon) then
-            self:SetIcon(option.icon.file, option.icon.width, option.icon.height)
+            local path = option.icon.file or option.icon.texture
+            self:SetIcon(path, option.icon.width or 14, option.icon.height or 14)
+            self.icon:Show()
+        else
+            self.icon:SetTexture(nil)
+            self.icon:SetSize(0, 0)
+            self.icon:Hide()
         end
     end
 
     f.SetFrameWidth = function(self, width)
         self:SetWidth(width)
+        if self.optionData and self.optionData.square then
+            self:SetHeight(width)
+        end
     end
 
     f.configured = true
