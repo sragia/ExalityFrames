@@ -20,20 +20,120 @@ local function resolveScale(region)
   return UIParent:GetEffectiveScale()
 end
 
-local function scalePixel(value, region, minPixels)
-  if ns.EXFrames.config.scalePixel then
-    return ns.EXFrames.config.scalePixel(value, region, minPixels)
+local function toPhysicalPixels(value, scale)
+  return Round(value * scale / PixelUtil.GetPixelToUIUnitFactor())
+end
+
+local function fromPhysicalPixels(pixels, scale)
+  return pixels * PixelUtil.GetPixelToUIUnitFactor() / scale
+end
+
+local ANCHOR_COORDS = {
+  TOPLEFT = function(left, bottom, width, height)
+    return left, bottom + height
+  end,
+  TOP = function(left, bottom, width, height)
+    return left + width * 0.5, bottom + height
+  end,
+  TOPRIGHT = function(left, bottom, width, height)
+    return left + width, bottom + height
+  end,
+  LEFT = function(left, bottom, width, height)
+    return left, bottom + height * 0.5
+  end,
+  CENTER = function(left, bottom, width, height)
+    return left + width * 0.5, bottom + height * 0.5
+  end,
+  RIGHT = function(left, bottom, width, height)
+    return left + width, bottom + height * 0.5
+  end,
+  BOTTOMLEFT = function(left, bottom, width, height)
+    return left, bottom
+  end,
+  BOTTOM = function(left, bottom, width, height)
+    return left + width * 0.5, bottom
+  end,
+  BOTTOMRIGHT = function(left, bottom, width, height)
+    return left + width, bottom
+  end,
+}
+
+local function getAnchorCoord(left, bottom, width, height, anchor)
+  local fn = ANCHOR_COORDS[anchor]
+  if not fn then
+    return left, bottom
+  end
+  return fn(left, bottom, width, height)
+end
+
+local function getRelativeAnchorCoord(relativeTo, relativePoint)
+  local left, bottom, width, height = relativeTo:GetRect()
+  if not left or not bottom or not width or not height then
+    return 0, 0
+  end
+  return getAnchorCoord(left, bottom, width, height, relativePoint)
+end
+
+---Snap a UI-unit value to the nearest physical pixel. Override via config.scalePixel.
+ns.EXFrames.ScalePixel = function(self, value, region, minPixels)
+  if self.config.scalePixel then
+    return self.config.scalePixel(value, region, minPixels)
   end
   return PixelUtil.GetNearestPixelSize(value, resolveScale(region), minPixels)
 end
 
-ns.EXFrames.ScalePixel = function(self, value, region, minPixels)
-  return scalePixel(value, region, minPixels)
-end
-
+---Convert a desired physical pixel count into exact UI units.
 ns.EXFrames.ScalePixels = function(self, pixelCount, region)
   local scale = resolveScale(region)
-  return (pixelCount * PixelUtil.GetPixelToUIUnitFactor()) / scale
+  return fromPhysicalPixels(pixelCount, scale)
+end
+
+---Align a frame's screen rect to the physical pixel grid. Override via config.snapFrame.
+ns.EXFrames.SnapFrameToPixels = function(self, frame)
+  if self.config.snapFrame then
+    return self.config.snapFrame(frame)
+  end
+
+  local point, relativeTo, relativePoint = frame:GetPoint(1)
+  if not point then
+    return
+  end
+  relativeTo = relativeTo or UIParent
+  relativePoint = relativePoint or point
+
+  local scale = resolveScale(frame)
+  local left = frame:GetLeft()
+  local bottom = frame:GetBottom()
+  local width = frame:GetWidth()
+  local height = frame:GetHeight()
+  if not left or not bottom or not width or not height then
+    return
+  end
+
+  local pxLeft = toPhysicalPixels(left, scale)
+  local pxBottom = toPhysicalPixels(bottom, scale)
+  local pxRight = toPhysicalPixels(left + width, scale)
+  local pxTop = toPhysicalPixels(bottom + height, scale)
+
+  if pxRight <= pxLeft then
+    pxRight = pxLeft + 1
+  end
+  if pxTop <= pxBottom then
+    pxTop = pxBottom + 1
+  end
+
+  local newWidth = fromPhysicalPixels(pxRight - pxLeft, scale)
+  local newHeight = fromPhysicalPixels(pxTop - pxBottom, scale)
+  local newLeft = fromPhysicalPixels(pxLeft, scale)
+  local newBottom = fromPhysicalPixels(pxBottom, scale)
+
+  frame:SetSize(newWidth, newHeight)
+
+  local frameX, frameY = getAnchorCoord(newLeft, newBottom, newWidth, newHeight, point)
+  local relX, relY = getRelativeAnchorCoord(relativeTo, relativePoint)
+
+  frame:ClearAllPoints()
+  frame:SetPoint(point, relativeTo, relativePoint, frameX - relX, frameY - relY)
 end
 
 ns.EXFrames.RegisterPixelPerfectBackdrop = function(self, frame, borderSize)
@@ -46,8 +146,8 @@ ns.EXFrames.RefreshPixelPerfect = function(self)
   for i = #self.pixelPerfectBackdrops, 1, -1 do
     local entry = self.pixelPerfectBackdrops[i]
     if entry.frame and entry.frame.SetBackdrop then
-      if self.config.snapFrame and entry.frame:GetNumPoints() == 1 then
-        self.config.snapFrame(entry.frame)
+      if entry.frame:GetNumPoints() == 1 then
+        self:SnapFrameToPixels(entry.frame)
       end
       local bgR, bgG, bgB, bgA = entry.frame:GetBackdropColor()
       local borderR, borderG, borderB, borderA = entry.frame:GetBackdropBorderColor()
@@ -65,10 +165,111 @@ ns.EXFrames.RefreshPixelPerfect = function(self)
   self:RefreshInputBorders()
 end
 
+local function configureBorderTexture(texture)
+  texture:SetSnapToPixelGrid(true)
+  texture:SetTexelSnappingBias(0)
+end
+
+local function applyBorderThickness(border, thickness, region)
+  local size = ns.EXFrames:ScalePixels(thickness, region)
+  local frame = border.anchor
+
+  border.Top:ClearAllPoints()
+  border.Top:SetHeight(size)
+  border.Top:SetPoint('TOPLEFT', frame, 'TOPLEFT', 0, 0)
+  border.Top:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', 0, 0)
+
+  border.Bottom:ClearAllPoints()
+  border.Bottom:SetHeight(size)
+  border.Bottom:SetSnapToPixelGrid(false)
+  local bottomOffset = 0
+  if border.outwardBottom ~= false then
+    bottomOffset = -ns.EXFrames:ScalePixels(1, region)
+  end
+  border.Bottom:SetPoint('BOTTOMLEFT', frame, 'BOTTOMLEFT', 0, bottomOffset)
+  border.Bottom:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, bottomOffset)
+
+  border.Left:ClearAllPoints()
+  border.Left:SetWidth(size)
+  border.Left:SetPoint('TOPLEFT', frame, 'TOPLEFT', 0, 0)
+  border.Left:SetPoint('BOTTOMLEFT', frame, 'BOTTOMLEFT', 0, 0)
+
+  border.Right:ClearAllPoints()
+  border.Right:SetWidth(size)
+  border.Right:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', 0, 0)
+  border.Right:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, 0)
+end
+
+---Create a 1px-style border from four textures on the frame.
+---@param options? { layer?: string, outwardBottom?: boolean }
+ns.EXFrames.AddPixelPerfectBorder = function(self, frame, thickness, options)
+  thickness = thickness or 1
+  options = options or {}
+  local layer = options.layer or 'BORDER'
+  local solid = (self.assets and self.assets.textures and self.assets.textures.solidWhite)
+    or 'Interface\\Buttons\\WHITE8X8.blp'
+
+  local border = {
+    anchor = frame,
+    thicknessPixels = thickness,
+    outwardBottom = options.outwardBottom,
+  }
+
+  border.Top = frame:CreateTexture(nil, layer, nil, 1)
+  border.Top:SetTexture(solid)
+  configureBorderTexture(border.Top)
+
+  border.Bottom = frame:CreateTexture(nil, layer, nil, 2)
+  border.Bottom:SetTexture(solid)
+  configureBorderTexture(border.Bottom)
+
+  border.Left = frame:CreateTexture(nil, layer, nil, 3)
+  border.Left:SetTexture(solid)
+  configureBorderTexture(border.Left)
+
+  border.Right = frame:CreateTexture(nil, layer, nil, 4)
+  border.Right:SetTexture(solid)
+  configureBorderTexture(border.Right)
+
+  applyBorderThickness(border, thickness, frame)
+
+  border.SetBorderColor = function(selfBorder, r, g, b, a)
+    selfBorder.Top:SetVertexColor(r, g, b, a)
+    selfBorder.Bottom:SetVertexColor(r, g, b, a)
+    selfBorder.Left:SetVertexColor(r, g, b, a)
+    selfBorder.Right:SetVertexColor(r, g, b, a)
+  end
+
+  border.SetBorderThickness = function(selfBorder, nextThickness)
+    selfBorder.thicknessPixels = nextThickness or selfBorder.thicknessPixels or 1
+    applyBorderThickness(selfBorder, selfBorder.thicknessPixels, selfBorder.anchor)
+  end
+
+  border.Show = function(selfBorder)
+    selfBorder.Top:Show()
+    selfBorder.Bottom:Show()
+    selfBorder.Left:Show()
+    selfBorder.Right:Show()
+  end
+
+  border.Hide = function(selfBorder)
+    selfBorder.Top:Hide()
+    selfBorder.Bottom:Hide()
+    selfBorder.Left:Hide()
+    selfBorder.Right:Hide()
+  end
+
+  return border
+end
+
 ns.EXFrames.ApplyInputBorder = function(self, frame, borderSize)
   borderSize = borderSize or 1
-  if not frame.PPBorder and self.config.addPixelPerfectBorder then
-    frame.PPBorder = self.config.addPixelPerfectBorder(frame, borderSize, { register = false })
+  if not frame.PPBorder then
+    if self.config.addPixelPerfectBorder then
+      frame.PPBorder = self.config.addPixelPerfectBorder(frame, borderSize, { register = false })
+    else
+      frame.PPBorder = self:AddPixelPerfectBorder(frame, borderSize)
+    end
     if frame.PPBorder then
       table.insert(self.inputBorders, frame)
     end
@@ -95,8 +296,8 @@ ns.EXFrames.RefreshInputBorders = function(self)
   for i = #self.inputBorders, 1, -1 do
     local frame = self.inputBorders[i]
     if frame and frame.PPBorder then
-      if self.config.snapFrame and frame:GetNumPoints() == 1 then
-        self.config.snapFrame(frame)
+      if frame:GetNumPoints() == 1 then
+        self:SnapFrameToPixels(frame)
       end
       frame.PPBorder:SetBorderThickness(frame.PPBorder.thicknessPixels or 1)
     else
@@ -154,9 +355,11 @@ ns.EXFrames.InitFrames = function(self)
 end
 
 ---@param self ExalityFrames
----@param config {logoPath?: string, defaultFontPath?: string}
+---Host addons should mainly pass branding here (logo/font). Pixel helpers are built-in;
+---optional overrides: scalePixel, snapFrame, addPixelPerfectBorder. Colors via SetTheme().
+---@param config {logoPath?: string, defaultFontPath?: string, scalePixel?: function, snapFrame?: function, addPixelPerfectBorder?: function}
 ns.EXFrames.Configure = function(self, config)
-  self.config = config
+  self.config = config or {}
 end
 
 local randCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"

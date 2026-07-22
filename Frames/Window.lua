@@ -29,9 +29,7 @@ local configure = function(frame)
     frame:RegisterForDrag("LeftButton")
     frame:EnableMouse(true)
     local function refreshWindowPixelPerfect(windowFrame)
-        if EXFrames.config.snapFrame then
-            EXFrames.config.snapFrame(windowFrame)
-        end
+        EXFrames:SnapFrameToPixels(windowFrame)
         if EXFrames.RefreshPixelPerfect then
             EXFrames:RefreshPixelPerfect()
         end
