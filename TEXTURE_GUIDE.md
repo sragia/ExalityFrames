@@ -63,10 +63,18 @@ Fill textures and border textures within the same group share the same corner ra
 - **Content:** Rounded rectangle, white fill, transparent corners.
 - **Used by:** MenuItem, ModuleItem
 
-### `ui.tabActive` / `ui.tabInactive` — tabs
-- **File:** `Assets/UI/tab-active.png`, `Assets/UI/tab-inactive.png`
-- **Canvas:** 128×128, **Code margins:** 6px, **Corner radius:** 6px top-left/right only; flat bottom
-- **Used by:** Tabs
+### Tabs — underline + glow (not 9-slice pills)
+
+Tabs no longer use filled `ui.tabActive` / `ui.tabInactive` backgrounds. Chrome is:
+
+- **1px underline** — solid color via `SetColorTexture` (`Theme.accent` when active, `Theme.border` otherwise)
+- **`tabs.glow`** — soft glow strip above the underline, accent-tinted, shown only on the active tab
+
+| Slot | File | Notes |
+|---|---|---|
+| `textures.tabs.glow` | `Assets/Tabs/glow-bottom.png` | White on transparent; tinted with `Theme.accent` at runtime. Height ~20px in UI. |
+
+`ui.tabActive` / `ui.tabInactive` slots remain in Core for legacy paths but are **unused** by `tabs-frame`.
 
 ---
 

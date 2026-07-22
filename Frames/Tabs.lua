@@ -12,48 +12,77 @@ tabs.Init = function(self)
     tabs.pool = CreateFramePool('Frame', UIParent)
 end
 
+local function ApplyTabVisual(button, active, hovered)
+    local theme = EXFrames.Theme
+
+    button.underline:Show()
+    button.glow:Show()
+
+    if active then
+        button.text:SetVertexColor(unpack(theme.white))
+        button.underline:SetColorTexture(theme.accent[1], theme.accent[2], theme.accent[3], 1)
+        button.glow:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
+    elseif hovered then
+        button.text:SetVertexColor(unpack(theme.white))
+        button.underline:SetColorTexture(theme.border[1], theme.border[2], theme.border[3], 1)
+        button.glow:SetVertexColor(theme.textMuted[1], theme.textMuted[2], theme.textMuted[3], 0.55)
+    else
+        button.text:SetVertexColor(unpack(theme.textMuted))
+        button.underline:SetColorTexture(theme.border[1], theme.border[2], theme.border[3], 0.7)
+        button.glow:SetVertexColor(theme.textMuted[1], theme.textMuted[2], theme.textMuted[3], 0.25)
+    end
+end
+
 local function CreateTabButton(parent)
     local button = CreateFrame('Button', nil, parent)
     button.ID = ''
     button:SetSize(80, 20)
-
-    local texture = button:CreateTexture(nil, 'BACKGROUND')
-    texture:SetTexture(EXFrames.assets.textures.ui.tabInactive)
-    texture:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
-    texture:SetTextureSliceMargins(6, 6, 6, 6)
-    texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-    texture:SetAllPoints()
+    button.isActive = false
 
     local text = button:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
-    text:SetPoint('CENTER', 0, -2)
+    text:SetPoint('CENTER', 0, 0)
     text:SetWidth(0)
     button.text = text
 
+    local underline = button:CreateTexture(nil, 'OVERLAY')
+    underline:SetHeight(1)
+    underline:SetPoint('BOTTOMLEFT', text, 'BOTTOMLEFT', -5, -6)
+    underline:SetPoint('BOTTOMRIGHT', text, 'BOTTOMRIGHT', 5, -6)
+    button.underline = underline
+
+    local glow = button:CreateTexture(nil, 'ARTWORK')
+    glow:SetTexture(EXFrames.assets.textures.tabs.glow)
+    glow:SetHeight(20)
+    glow:SetPoint('BOTTOMLEFT', underline, 'TOPLEFT', 0, 0)
+    glow:SetPoint('BOTTOMRIGHT', underline, 'TOPRIGHT', 0, 0)
+    button.glow = glow
+
     button.SetActive = function(self, active)
-        if active then
-            texture:SetTexture(EXFrames.assets.textures.ui.tabActive)
-            texture:SetVertexColor(unpack(EXFrames.Theme.accent))
-            texture:SetTextureSliceMargins(6, 6, 6, 6)
-            texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-        else
-            texture:SetTexture(EXFrames.assets.textures.ui.tabInactive)
-            texture:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
-            texture:SetTextureSliceMargins(6, 6, 6, 6)
-            texture:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-        end
+        self.isActive = active and true or false
+        ApplyTabVisual(self, self.isActive, false)
     end
 
-    button.SetText = function(self, text)
-        self.text:SetText(text)
+    button.SetText = function(self, label)
+        self.text:SetText(label)
         self:SetWidth(self.text:GetStringWidth() + 20)
     end
+
+    button:SetScript('OnEnter', function(self)
+        ApplyTabVisual(self, self.isActive, true)
+    end)
+
+    button:SetScript('OnLeave', function(self)
+        ApplyTabVisual(self, self.isActive, false)
+    end)
 
     button:SetScript('OnClick', function(self)
         if (self.onClick) then
             self:onClick(self.ID)
         end
     end)
+
+    ApplyTabVisual(button, false, false)
 
     return button
 end
@@ -137,7 +166,7 @@ local configure = function(frame)
             button:SetText(tab.label)
             button.onClick = self.onTabClick
             if (not prev) then
-                button:SetPoint('BOTTOMLEFT', self.tabBar, 'BOTTOMLEFT', 20, 0)
+                button:SetPoint('BOTTOMLEFT', self.tabBar, 'BOTTOMLEFT', 20, 1)
             else
                 button:SetPoint('BOTTOMLEFT', prev, 'BOTTOMRIGHT', 3, 0)
             end
@@ -147,6 +176,8 @@ local configure = function(frame)
             elseif (not self.activeTabID and not prev) then
                 button:SetActive(true)
                 self.activeTabID = tab.ID
+            else
+                button:SetActive(false)
             end
             prev = button
         end

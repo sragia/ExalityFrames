@@ -153,6 +153,8 @@ button.Create = function(self, options, parent)
 
     if (options and options.text) then
         f:SetText(options.text)
+    else
+        f:SetText('')
     end
 
     if (options and options.color) then
@@ -169,19 +171,29 @@ button.Create = function(self, options, parent)
 
     if (options and options.onClick) then
         f.onClick = options.onClick
+    else
+        f.onClick = nil
     end
 
     if (options and options.icon) then
         f:SetIcon(options.icon.texture, options.icon.width, options.icon.height)
+        f.icon:Show()
+    else
+        f.icon:SetTexture(nil)
+        f.icon:SetSize(0, 0)
+        f.icon:Hide()
     end
 
     f.Destroy = function(self)
         self:ClearObservable()
+        self.onClick = nil
+        self:SetText('')
         self.icon:SetTexture(nil)
+        self.icon:SetSize(0, 0)
+        self.icon:Hide()
         self.hoverTex:SetAlpha(0)
         self.hoverTex:SetVertexColor(unpack(EXFrames.Theme.accentLight))
         self:SetColor(unpack(EXFrames.Theme.accent))
-        self.icon:SetSize(0, 0)
         button.pool:Release(self)
     end
 

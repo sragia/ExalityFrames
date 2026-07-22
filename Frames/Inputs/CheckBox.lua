@@ -73,18 +73,19 @@ local function ConfigureFrame(f)
             self.Mark:SetAlpha(0)
         end
 
-        if (self.onChange) then
+        if (self.onChange and not self.suppressOnChange) then
             self.onChange(value)
         end
     end)
 
     f.SetOptionData = function(self, option)
         self.optionData = option
-
-        self:SetValue('value', option.currentValue and option.currentValue() or false)
         self:SetLabel(option.label or '')
-
         self.onChange = option.onChange
+
+        self.suppressOnChange = true
+        self:SetValue('value', option.currentValue and option.currentValue() or false)
+        self.suppressOnChange = false
     end
 
     f.configured = true
@@ -100,6 +101,7 @@ checkbox.Create = function(self)
     end
     f.Destroy = function(self)
         self.onChange = nil
+        self.suppressOnChange = nil
         checkbox.pool:Release(self)
     end
 

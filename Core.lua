@@ -475,6 +475,7 @@ ns.EXFrames.assets = {
       info = BASE_PATH .. 'Assets\\Icon\\info.png',
     },
     tabs = {
+      glow = BASE_PATH .. 'Assets\\Tabs\\glow-bottom.png',
       active = BASE_PATH .. 'Assets\\Tabs\\active.png',
       inactive = BASE_PATH .. 'Assets\\Tabs\\inactive.png',
     },
