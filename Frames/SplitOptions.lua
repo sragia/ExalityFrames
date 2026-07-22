@@ -51,12 +51,31 @@ local function CreateCategoryLabel(parent)
     return frame
 end
 
+local function ApplyItemVisual(button, active, hovered)
+    local theme = EXFrames.Theme
+
+    if active then
+        button.bg:SetVertexColor(unpack(theme.backgroundPanel))
+        button.glow:SetVertexColor(unpack(theme.accent))
+        button:SetInputBorderActive(true)
+    elseif hovered then
+        button.bg:SetVertexColor(unpack(theme.backgroundLight))
+        button.glow:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], 0.55)
+        button:SetInputBorderActive(true)
+    else
+        button.bg:SetVertexColor(unpack(theme.background))
+        button.glow:SetVertexColor(unpack(theme.border))
+        button:SetInputBorderActive(false)
+    end
+end
+
 local function CreateItem(parent, dualLine)
     local button = CreateFrame('Button', nil, parent)
     local height = dualLine and 36 or 20
     button:SetHeight(EXFrames:ScalePixel(height, parent))
     button.isCategory = false
     button.dualLine = dualLine
+    button.isActive = false
 
     local bg = button:CreateTexture(nil, 'BACKGROUND')
     bg:SetTexture(EXFrames.assets.textures.solidWhite)
@@ -66,36 +85,41 @@ local function CreateItem(parent, dualLine)
 
     EXFrames:ApplyInputBorder(button, 1)
 
+    local glow = button:CreateTexture(nil, 'ARTWORK')
+    glow:SetTexture(EXFrames.assets.textures.splitOptions.glow)
+    glow:SetAllPoints()
+    glow:SetVertexColor(unpack(EXFrames.Theme.border))
+    button.glow = glow
+
     local text = button:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
+    text:SetJustifyH('LEFT')
+    text:SetWordWrap(false)
+    text:SetMaxLines(1)
     button.text = text
 
     local subtext = button:CreateFontString(nil, 'OVERLAY')
     subtext:SetFont(EXFrames.assets.font.default(), 9, 'OUTLINE')
     subtext:SetTextColor(0.55, 0.55, 0.55, 1)
     subtext:SetJustifyH('LEFT')
+    subtext:SetWordWrap(false)
+    subtext:SetMaxLines(1)
     button.subtext = subtext
 
     if dualLine then
-        text:SetJustifyH('LEFT')
         text:SetPoint('TOPLEFT', 6, -5)
         text:SetPoint('TOPRIGHT', -6, -5)
         subtext:SetPoint('TOPLEFT', text, 'BOTTOMLEFT', 0, -1)
         subtext:SetPoint('TOPRIGHT', text, 'BOTTOMRIGHT', 0, -1)
     else
-        text:SetJustifyH('CENTER')
-        text:SetPoint('CENTER')
+        text:SetPoint('LEFT', 6, 0)
+        text:SetPoint('RIGHT', -6, 0)
         subtext:Hide()
     end
 
     button.SetActive = function(self, active)
-        if active then
-            self.bg:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
-            self:SetInputBorderActive(true)
-        else
-            self.bg:SetVertexColor(unpack(EXFrames.Theme.background))
-            self:SetInputBorderActive(false)
-        end
+        self.isActive = active and true or false
+        ApplyItemVisual(self, self.isActive, self:IsMouseOver())
     end
 
     button.SetText = function(self, value)
@@ -108,6 +132,14 @@ local function CreateItem(parent, dualLine)
             self.subtext:SetShown(value and value ~= '')
         end
     end
+
+    button:SetScript('OnEnter', function(self)
+        ApplyItemVisual(self, self.isActive, true)
+    end)
+
+    button:SetScript('OnLeave', function(self)
+        ApplyItemVisual(self, self.isActive, false)
+    end)
 
     button:SetScript('OnClick', function(self, mouseButton)
         if mouseButton == 'RightButton' then

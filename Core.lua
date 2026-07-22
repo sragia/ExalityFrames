@@ -690,6 +690,9 @@ ns.EXFrames.assets = {
       minus = BASE_PATH .. 'Assets\\MenuItem\\minus.png',
       plus = BASE_PATH .. 'Assets\\MenuItem\\plus.png',
     },
+    splitOptions = {
+      glow = BASE_PATH .. 'Assets\\SplitOptions\\glow.png',
+    },
     titleBg = BASE_PATH .. 'Assets\\title-bg.png',
     statusBar = BASE_PATH .. 'Assets\\StatusBar\\statusBar',
     solidBg = BASE_PATH .. 'Assets\\white.png',
