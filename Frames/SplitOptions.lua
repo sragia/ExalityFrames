@@ -69,6 +69,31 @@ local function ApplyItemVisual(button, active, hovered)
     end
 end
 
+local TEXT_PAD_LEFT = 6
+local TEXT_PAD_RIGHT = 6
+local PREVIEW_SIZE = 14
+local PREVIEW_PAD_RIGHT = 4
+local PREVIEW_GAP = 4
+
+local function ApplyLabelPoints(button)
+    local rightPad = TEXT_PAD_RIGHT
+    if button.previewButton and button.previewButton:IsShown() then
+        rightPad = PREVIEW_PAD_RIGHT + PREVIEW_SIZE + PREVIEW_GAP
+    end
+
+    button.text:ClearAllPoints()
+    button.subtext:ClearAllPoints()
+    if button.dualLine then
+        button.text:SetPoint('TOPLEFT', TEXT_PAD_LEFT, -5)
+        button.text:SetPoint('TOPRIGHT', -rightPad, -5)
+        button.subtext:SetPoint('TOPLEFT', button.text, 'BOTTOMLEFT', 0, -1)
+        button.subtext:SetPoint('TOPRIGHT', button.text, 'BOTTOMRIGHT', 0, -1)
+    else
+        button.text:SetPoint('LEFT', TEXT_PAD_LEFT, 0)
+        button.text:SetPoint('RIGHT', -rightPad, 0)
+    end
+end
+
 local function CreateItem(parent, dualLine)
     local button = CreateFrame('Button', nil, parent)
     local height = dualLine and 36 or 20
@@ -76,6 +101,7 @@ local function CreateItem(parent, dualLine)
     button.isCategory = false
     button.dualLine = dualLine
     button.isActive = false
+    button.previewEnabled = false
 
     local bg = button:CreateTexture(nil, 'BACKGROUND')
     bg:SetTexture(EXFrames.assets.textures.solidWhite)
@@ -106,14 +132,17 @@ local function CreateItem(parent, dualLine)
     subtext:SetMaxLines(1)
     button.subtext = subtext
 
-    if dualLine then
-        text:SetPoint('TOPLEFT', 6, -5)
-        text:SetPoint('TOPRIGHT', -6, -5)
-        subtext:SetPoint('TOPLEFT', text, 'BOTTOMLEFT', 0, -1)
-        subtext:SetPoint('TOPRIGHT', text, 'BOTTOMRIGHT', 0, -1)
-    else
-        text:SetPoint('LEFT', 6, 0)
-        text:SetPoint('RIGHT', -6, 0)
+    local previewButton = CreateFrame('Button', nil, button)
+    previewButton:SetSize(EXFrames:ScalePixel(PREVIEW_SIZE, parent), EXFrames:ScalePixel(PREVIEW_SIZE, parent))
+    previewButton:SetPoint('RIGHT', EXFrames:ScalePixel(-PREVIEW_PAD_RIGHT, parent), 0)
+    previewButton:Hide()
+    local previewIcon = previewButton:CreateTexture(nil, 'ARTWORK')
+    previewIcon:SetAllPoints()
+    previewButton.icon = previewIcon
+    button.previewButton = previewButton
+
+    ApplyLabelPoints(button)
+    if not dualLine then
         subtext:Hide()
     end
 
@@ -132,6 +161,68 @@ local function CreateItem(parent, dualLine)
             self.subtext:SetShown(value and value ~= '')
         end
     end
+
+    button.ApplyPreviewIconColor = function(self, hovered)
+        if self.previewEnabled then
+            if hovered then
+                self.previewButton.icon:SetVertexColor(unpack(EXFrames.Theme.accentLight))
+            else
+                self.previewButton.icon:SetVertexColor(unpack(EXFrames.Theme.accent))
+            end
+        else
+            if hovered then
+                self.previewButton.icon:SetVertexColor(unpack(EXFrames.Theme.text))
+            else
+                self.previewButton.icon:SetVertexColor(unpack(EXFrames.Theme.border))
+            end
+        end
+    end
+
+    button.SetPreviewEnabled = function(self, enabled)
+        self.previewEnabled = enabled and true or false
+        local icon = self.previewEnabled and self.previewIconOn or self.previewIconOff
+        if icon then
+            self.previewButton.icon:SetTexture(icon)
+        end
+        self:ApplyPreviewIconColor(self.previewButton:IsMouseOver())
+    end
+
+    button.SetPreview = function(self, config)
+        if not config then
+            self.previewButton:Hide()
+            self.onPreviewToggle = nil
+            self.previewEnabled = false
+            self.previewIconOn = nil
+            self.previewIconOff = nil
+            ApplyLabelPoints(self)
+            return
+        end
+
+        self.previewIconOn = config.iconOn
+        self.previewIconOff = config.iconOff
+        self.onPreviewToggle = config.onToggle
+        self.previewButton:Show()
+        self:SetPreviewEnabled(config.enabled)
+        ApplyLabelPoints(self)
+    end
+
+    previewButton:SetScript('OnEnter', function()
+        button:ApplyPreviewIconColor(true)
+        ApplyItemVisual(button, button.isActive, true)
+    end)
+
+    previewButton:SetScript('OnLeave', function()
+        button:ApplyPreviewIconColor(false)
+        ApplyItemVisual(button, button.isActive, button:IsMouseOver())
+    end)
+
+    previewButton:SetScript('OnClick', function()
+        local enabled = not button.previewEnabled
+        button:SetPreviewEnabled(enabled)
+        if button.onPreviewToggle then
+            button.onPreviewToggle(button.ID, enabled)
+        end
+    end)
 
     button:SetScript('OnEnter', function(self)
         ApplyItemVisual(self, self.isActive, true)
@@ -373,6 +464,7 @@ local configure = function(f)
                 button.ID = item.ID
                 button:SetText(item.label)
                 button:SetSubText(item.sublabel)
+                button:SetPreview(item.preview)
                 button.contextMenuItems = item.contextMenuItems
                 button.onItemClick = self.onItemClick
                 button.onShowContextMenu = function()
@@ -401,6 +493,7 @@ local configure = function(f)
             self.items[i]:Hide()
             self.items[i].contextMenuItems = nil
             self.items[i].onShowContextMenu = nil
+            self.items[i]:SetPreview(nil)
         end
         for i = categoryIndex + 1, #self.categoryLabels do
             self.categoryLabels[i]:Hide()
@@ -448,6 +541,14 @@ local configure = function(f)
 
     f.SetOnItemChange = function(self, callback)
         self.onItemChange = callback
+    end
+
+    f.SyncPreviewToggles = function(self, isEnabled)
+        for _, item in ipairs(self.items) do
+            if not item.isCategory and item.previewButton and item.previewButton:IsShown() then
+                item:SetPreviewEnabled(isEnabled(item.ID))
+            end
+        end
     end
 
     f.AddExtraButton = function(self, buttonOptions)
