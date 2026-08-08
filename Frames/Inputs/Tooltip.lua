@@ -22,9 +22,14 @@ local function ConfigureFrame(f)
     text:SetVertexColor(1, 1, 1, 1)
     text:SetPoint('CENTER')
     text:SetWidth(0)
+    f.text = text
 
     f.SetText = function(self, value)
         text:SetText(value)
+    end
+
+    f.SetFontSize = function(self, size)
+        text:SetFont(EXFrames.assets.font.default(), size or 10, 'OUTLINE')
     end
 
     local bg = f:CreateTexture()
