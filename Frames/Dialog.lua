@@ -101,6 +101,8 @@ local function ConfigureFrame(f)
         end
         prev:SetPoint('BOTTOMRIGHT', self, 'BOTTOMRIGHT', -5, 5)
     end
+
+    f.configured = true
 end
 
 ---Create Dialog Frame
@@ -116,3 +118,5 @@ dialog.Create = function(self)
 
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(dialog)

@@ -20,34 +20,40 @@ local function ConfigureFrame(f, options)
     f:SetSize(49, 20)
 
     local th = EXFrames.Theme
+    local SWITCH_WIDTH = 49
 
-    local base = f:CreateTexture(nil, 'ARTWORK')
+    local switch = CreateFrame('Frame', nil, f)
+    switch:SetSize(SWITCH_WIDTH, 20)
+    switch:SetPoint('LEFT')
+    f.switch = switch
+
+    local base = switch:CreateTexture(nil, 'ARTWORK')
     base:SetTexture(EXFrames.assets.textures.input.toggle)
     base:SetTexCoord(1 / 256, 167 / 256, 181 / 256, 248 / 256)
     base:SetVertexColor(unpack(th.backgroundDeep))
     base:SetAllPoints()
 
-    local borderDisabled = f:CreateTexture(nil, 'ARTWORK')
+    local borderDisabled = switch:CreateTexture(nil, 'ARTWORK')
     borderDisabled:SetTexture(EXFrames.assets.textures.input.toggle)
     borderDisabled:SetTexCoord(1 / 256, 167 / 256, 90 / 256, 157 / 256)
     borderDisabled:SetVertexColor(unpack(th.border))
     borderDisabled:SetAllPoints()
 
-    local borderEnabled = f:CreateTexture(nil, 'ARTWORK')
+    local borderEnabled = switch:CreateTexture(nil, 'ARTWORK')
     borderEnabled:SetTexture(EXFrames.assets.textures.input.toggle)
     borderEnabled:SetTexCoord(1 / 256, 167 / 256, 1 / 256, 68 / 256)
     borderEnabled:SetVertexColor(unpack(th.accent))
     borderEnabled:SetAllPoints()
     borderEnabled:SetAlpha(0)
 
-    local thumbDisabled = f:CreateTexture(nil, 'OVERLAY')
+    local thumbDisabled = switch:CreateTexture(nil, 'OVERLAY')
     thumbDisabled:SetTexture(EXFrames.assets.textures.input.toggle)
     thumbDisabled:SetTexCoord(176 / 256, 255 / 256, 84 / 256, 163 / 256)
     thumbDisabled:SetVertexColor(unpack(th.gray))
     thumbDisabled:SetSize(25, 25)
     thumbDisabled:SetPoint('CENTER', base, 'LEFT', 10, 0)
 
-    local thumbEnabled = f:CreateTexture(nil, 'OVERLAY')
+    local thumbEnabled = switch:CreateTexture(nil, 'OVERLAY')
     thumbEnabled:SetTexture(EXFrames.assets.textures.input.toggle)
     thumbEnabled:SetTexCoord(176 / 256, 255 / 256, 1 / 256, 80 / 256)
     thumbEnabled:SetVertexColor(unpack(th.accent))
@@ -111,29 +117,34 @@ local function ConfigureFrame(f, options)
     end)
 
     local text = f:CreateFontString(nil, 'OVERLAY')
-    text:SetWidth(0)
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
     text:SetTextColor(unpack(th.text))
-    text:SetPoint('LEFT', base, 'RIGHT', 10, 0)
+    text:SetJustifyH('LEFT')
+    text:SetWordWrap(false)
+    text:SetPoint('LEFT', switch, 'RIGHT', 10, 0)
+    text:SetPoint('RIGHT', f, 'RIGHT', 0, 0)
     text:SetText(options.text)
     f.label = text
 
     local secondaryText = f:CreateFontString(nil, 'OVERLAY')
-    secondaryText:SetWidth(0)
     secondaryText:SetFont(EXFrames.assets.font.default(), 9, 'OUTLINE')
     secondaryText:SetPoint('TOPLEFT', text, 'BOTTOMLEFT', 0, -3)
+    secondaryText:SetPoint('RIGHT', f, 'RIGHT', 0, 0)
+    secondaryText:SetJustifyH('LEFT')
+    secondaryText:SetWordWrap(false)
     secondaryText:SetTextColor(unpack(th.textMuted))
     secondaryText:SetText(options.secondaryText or "")
     f.secondaryText = secondaryText
 
     f.SetSecondaryText = function(self, text)
         self.label:ClearAllPoints()
+        self.label:SetPoint('RIGHT', self, 'RIGHT', 0, 0)
         if (not text or text == '') then
-            self.label:SetPoint('LEFT', base, 'RIGHT', 10, 0)
+            self.label:SetPoint('LEFT', switch, 'RIGHT', 10, 0)
             self.secondaryText:SetText('')
             return
         end
-        self.label:SetPoint('TOPLEFT', base, 'TOPRIGHT', 10, 0)
+        self.label:SetPoint('TOPLEFT', switch, 'TOPRIGHT', 10, 0)
         self.secondaryText:SetText(text)
     end
 
@@ -149,10 +160,18 @@ local function ConfigureFrame(f, options)
         if (option.description) then
             self:SetSecondaryText(option.description)
         end
+        if option.currentValue then
+            local prevSuppress = self.suppressOnChange
+            self.suppressOnChange = true
+            self.disableAnim = true
+            self:SetValue('value', option.currentValue())
+            self.disableAnim = false
+            self.suppressOnChange = prevSuppress
+        end
     end
 
     f.SetFrameWidth = function(self, width)
-        --noop
+        self:SetWidth(math.max(SWITCH_WIDTH, width or SWITCH_WIDTH))
     end
 
     f.isConfigured = true
@@ -177,6 +196,9 @@ toggle.Create = function(self, options, parent)
     end
 
     input.Destroy = function(self)
+        self.onChange = nil
+        self.suppressOnChange = nil
+        self._valueObserver = nil
         self:ClearObservable()
         self:SetSecondaryText()
         toggle.pool:Release(self)
@@ -200,17 +222,22 @@ toggle.Create = function(self, options, parent)
     end
     input.disableAnim = false
 
-    input:Observe('value', function(value, oldValue)
-        if (value and not input.enabled) then
-            input:Enable()
-        elseif (not value and input.enabled) then
-            input:Disable();
-        end
-        if (input.onChange) then
-            input.onChange(value)
-        end
-    end)
+    if not input._valueObserver then
+        input._valueObserver = true
+        input:Observe('value', function(value)
+            if (value and not input.enabled) then
+                input:Enable()
+            elseif (not value and input.enabled) then
+                input:Disable()
+            end
+            if (input.onChange and not input.suppressOnChange) then
+                input.onChange(value)
+            end
+        end)
+    end
 
     input:Show()
     return input
 end
+
+EXFrames.FrameBase.StandardizeCreate(toggle)

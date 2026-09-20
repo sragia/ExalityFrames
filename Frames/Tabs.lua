@@ -135,7 +135,7 @@ local configure = function(frame)
     frame.tabBar = tabBar
 
     local panel = EXFrames:GetFrame('panel-frame'):Create()
-    panel:SetBackgroundColor(0.12, 0.12, 0.12, 0.8)
+    panel:SetSubtleChrome()
     panel:SetParent(frame)
     panel:SetPoint('TOPLEFT', tabBar, 'BOTTOMLEFT')
     panel:SetPoint('BOTTOMRIGHT')
@@ -226,3 +226,5 @@ tabs.Create = function(self, options)
 
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(tabs, 'options-only')

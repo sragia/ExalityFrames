@@ -21,6 +21,12 @@ window.Init = function(self)
     self.pool = CreateFramePool('Frame', UIParent)
 end
 
+local DEFAULT_CHROME = {
+    backgroundTexture = [[Interface/Addons/ExalityUI/Options/Assets/main-bg_2.png]],
+    headerTexture = [[Interface/Addons/ExalityUI/Options/Assets/top-bar.png]],
+    closeIcon = [[Interface/Addons/ExalityUI/Options/Assets/icon-close.png]],
+}
+
 local configure = function(frame)
     frame:SetSize(500, 500)
     frame.windowId = EXFrames.utils.generateRandomString(10)
@@ -28,20 +34,16 @@ local configure = function(frame)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
     frame:EnableMouse(true)
-    local function refreshWindowPixelPerfect(windowFrame)
-        EXFrames:SnapFrameToPixels(windowFrame)
-        if EXFrames.RefreshPixelPerfect then
-            EXFrames:RefreshPixelPerfect()
-        end
-    end
-
     frame:SetScript("OnDragStart", function(self)
         windowManager:RaiseWindow(self)
         self:StartMoving()
     end)
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        refreshWindowPixelPerfect(self)
+        self._userPlaced = true
+        if EXFrames.RefreshPixelPerfect then
+            EXFrames:RefreshPixelPerfect()
+        end
     end)
     frame:SetClampedToScreen(true)
     frame:SetFrameStrata("DIALOG")
@@ -63,7 +65,7 @@ local configure = function(frame)
         if (self.StaticAnchor) then
             self:ClearAllPoints()
             self:SetPoint(unpack(self.StaticAnchor))
-        else
+        elseif not self._userPlaced then
             windowManager:SetValidCenterPosition(self)
         end
         self.fadeIn:Play()
@@ -97,6 +99,12 @@ local configure = function(frame)
         EXFrames:Callback('windowClose', self.windowId)
     end
 
+    frame.showHeader = true
+    frame.headerHeight = 40
+    frame.headerInset = 5
+    frame.headerButtonGap = 5
+    frame.headerButtons = {}
+
     if (not frame.Texture) then
         local th = EXFrames.Theme
 
@@ -108,21 +116,40 @@ local configure = function(frame)
         bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
         bg:SetAllPoints()
 
-        -- Border overlay: swap panelBorder from WHITE8X8 to a proper rounded PNG when ready
         local borderOverlay = frame:CreateTexture(nil, 'OVERLAY', nil, 7)
         borderOverlay:SetTexture(EXFrames.assets.textures.ui.panelBorder)
         borderOverlay:SetVertexColor(unpack(th.border))
         borderOverlay:SetTextureSliceMargins(8, 8, 8, 8)
         borderOverlay:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
         borderOverlay:SetAllPoints()
-        borderOverlay:SetAlpha(0)  -- invisible until proper border PNG is provided
+        borderOverlay:SetAlpha(0)
         frame.borderOverlay = borderOverlay
     end
 
+    if (not frame.header) then
+        local th = EXFrames.Theme
+        local header = CreateFrame('Frame', nil, frame)
+        header:SetHeight(frame.headerHeight)
+        frame.header = header
+
+        local titleBar = CreateFrame('Frame', nil, header)
+        titleBar:SetPoint('TOPLEFT')
+        titleBar:SetPoint('BOTTOMLEFT')
+        frame.titleBar = titleBar
+
+        local headerTex = titleBar:CreateTexture(nil, 'BACKGROUND')
+        headerTex:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+        headerTex:SetVertexColor(unpack(th.backgroundDeep))
+        headerTex:SetTextureSliceMargins(16, 16, 16, 16)
+        headerTex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        headerTex:SetAllPoints()
+        frame.headerTex = headerTex
+    end
+
     if (not frame.logo) then
-        local logo = CreateFrame('Frame', nil, frame)
+        local logo = CreateFrame('Frame', nil, frame.titleBar)
         logo:SetSize(25, 25)
-        logo:SetPoint('LEFT', frame, 'TOPLEFT', 10, -20)
+        logo:SetPoint('LEFT', frame.headerButtonGap, 0)
 
         local texture = logo:CreateTexture(nil, 'OVERLAY')
         texture:SetTexture(EXFrames.config.logoPath)
@@ -135,6 +162,7 @@ local configure = function(frame)
         version:SetVertexColor(.8, .8, .8, 1)
         version:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
         version:SetText(addonVersion)
+        logo.version = version
 
         frame.logo = logo
 
@@ -143,6 +171,9 @@ local configure = function(frame)
                 version:Hide()
             else
                 version:Show()
+            end
+            if self.UpdateTitleAnchor then
+                self:UpdateTitleAnchor()
             end
         end
     end
@@ -156,21 +187,21 @@ local configure = function(frame)
         resizeBtn:SetHighlightTexture(EXFrames.assets.textures.window.resizeBtnHighlight)
         resizeBtn:Init(frame, 500, 500, 500, 1200);
         resizeBtn:SetOnResizeStoppedCallback(function(target)
-            refreshWindowPixelPerfect(target)
+            target._userPlaced = true
+            if EXFrames.RefreshPixelPerfect then
+                EXFrames:RefreshPixelPerfect()
+            end
         end)
     end
 
     if (not frame.close) then
         local th = EXFrames.Theme
-        local sw = EXFrames.assets.textures.solidWhite
-
-        local closeContainer = CreateFrame("Button", nil, frame)
-        closeContainer:SetSize(38, 28)
-        closeContainer:SetPoint("TOPRIGHT", -8, -6)
+        local closeContainer = CreateFrame("Button", nil, frame.header)
+        closeContainer:SetSize(frame.headerHeight, frame.headerHeight)
 
         local texture = closeContainer:CreateTexture(nil, "BACKGROUND")
         texture:SetTexture(EXFrames.assets.textures.ui.buttonBg)
-        texture:SetTextureSliceMargins(31, 31, 31, 31)
+        texture:SetTextureSliceMargins(16, 16, 16, 16)
         texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
         texture:SetVertexColor(unpack(th.faded))
         texture:SetAllPoints()
@@ -196,6 +227,8 @@ local configure = function(frame)
         end)
 
         frame.close = closeContainer
+        frame.close.bg = texture
+        frame.close.icon = closeIcon
     end
 
     if (not frame.timer) then
@@ -217,23 +250,174 @@ local configure = function(frame)
         frame.timerContainer:Hide();
     end
 
-    local title = frame:CreateFontString(nil, "OVERLAY")
-    frame.title = title
-    title:SetFont(EXFrames.assets.font.default(), 12, 'OUTLINE')
-    title:SetTextColor(1, 1, 1)
-    title:SetPoint('CENTER', frame, 'TOP', 0, -20)
-    title:SetText(addonName)
+    if not frame.title then
+        local title = frame.titleBar:CreateFontString(nil, "OVERLAY")
+        frame.title = title
+        title:SetFont(EXFrames.assets.font.default(), 12, 'OUTLINE')
+        title:SetTextColor(1, 1, 1)
+        title:SetJustifyH('LEFT')
+        title:SetWidth(0)
+        title:SetText(addonName)
+    end
 
-    frame.SetTitle = function(self, title)
-        self.title:SetText(title)
+    frame.UpdateTitleAnchor = function(self)
+        self.title:ClearAllPoints()
+        if self.logo and self.logo:IsShown() then
+            local version = self.logo.version
+            if version and version:IsShown() then
+                self.title:SetPoint('LEFT', version, 'RIGHT', 8, 0)
+            else
+                self.title:SetPoint('LEFT', self.logo, 'RIGHT', 8, 0)
+            end
+        else
+            self.title:SetPoint('LEFT', self.titleBar, 'LEFT', self.headerButtonGap, 0)
+        end
+    end
+
+    frame.ApplyChromeLayout = function(self)
+        local inset = self.headerInset or 0
+        local headerH = self.headerHeight or 40
+        local gap = self.headerButtonGap or 5
+
+        if self.Texture then
+            self.Texture:ClearAllPoints()
+            self.Texture:SetAllPoints()
+        end
+
+        if self.header then
+            self.header:SetHeight(headerH)
+            self.header:ClearAllPoints()
+            if self.showHeader ~= false then
+                self.header:SetPoint('TOPLEFT', inset, -inset)
+                self.header:SetPoint('TOPRIGHT', -inset, -inset)
+                self.header:Show()
+            else
+                self.header:Hide()
+            end
+        end
+
+        if self.container then
+            self.container:ClearAllPoints()
+            if self.showHeader ~= false then
+                self.container:SetPoint('TOPLEFT', inset, -(inset + headerH))
+            else
+                self.container:SetPoint('TOPLEFT', inset, -inset)
+            end
+            self.container:SetPoint('BOTTOMRIGHT', -inset, inset)
+        end
+
+        if self.logo then
+            self.logo:ClearAllPoints()
+            self.logo:SetPoint('LEFT', self.titleBar, 'LEFT', gap, 0)
+        end
+
+        self:UpdateTitleAnchor()
+        self:LayoutHeaderButtons()
+    end
+
+    frame.SetHeaderShown = function(self, shown)
+        self.showHeader = shown ~= false
+        self:ApplyChromeLayout()
+    end
+
+    frame.SetHeaderInset = function(self, inset)
+        self.headerInset = inset or 0
+        self:ApplyChromeLayout()
+    end
+
+    frame.SetHeaderHeight = function(self, height)
+        self.headerHeight = height or 40
+        self:ApplyChromeLayout()
+    end
+
+    frame.SetHeaderButtonGap = function(self, gap)
+        self.headerButtonGap = gap or 5
+        self:ApplyChromeLayout()
+    end
+
+    frame.SetTitle = function(self, text)
+        self.title:SetText(text or '')
+    end
+
+    frame.LayoutHeaderButtons = function(self)
+        local size = self.headerHeight or 40
+        local gap = self.headerButtonGap or 5
+        if self.close then
+            self.close:SetSize(size, size)
+            self.close:ClearAllPoints()
+            self.close:SetPoint('RIGHT', self.header, 'RIGHT', 0, 0)
+        end
+        local prev = self.close
+        for i = #self.headerButtons, 1, -1 do
+            local btn = self.headerButtons[i]
+            btn:SetSize(size, size)
+            btn:ClearAllPoints()
+            btn:SetPoint('RIGHT', prev, 'LEFT', -gap, 0)
+            prev = btn
+        end
+        if self.titleBar then
+            self.titleBar:ClearAllPoints()
+            self.titleBar:SetPoint('TOPLEFT')
+            self.titleBar:SetPoint('BOTTOMLEFT')
+            if prev then
+                self.titleBar:SetPoint('RIGHT', prev, 'LEFT', -gap, 0)
+            else
+                self.titleBar:SetPoint('RIGHT')
+            end
+        end
+    end
+
+    frame.AddHeaderButton = function(self, spec)
+        spec = spec or {}
+        local size = self.headerHeight or 40
+        local btn = EXFrames:GetFrame('button'):Create(self.header, {
+            text = spec.text or '',
+            onClick = spec.onClick,
+            size = spec.size or { size, size },
+            color = spec.color or EXFrames.Theme.faded,
+            icon = spec.icon,
+        })
+        table.insert(self.headerButtons, btn)
+        self:LayoutHeaderButtons()
+        return btn
+    end
+
+    frame.SetHeaderTexture = function(self, path)
+        if not self.headerTex then
+            return
+        end
+        self.headerTex:SetTexture(path)
+        self.headerTex:SetVertexColor(1, 1, 1, 1)
+        self.headerTex:SetTextureSliceMargins(20, 20, 20, 20)
+        self.headerTex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        self.headerTex:Show()
+        self:ApplyChromeLayout()
+    end
+
+    frame.SetBackgroundTexture = function(self, path)
+        if not self.Texture then
+            return
+        end
+        self.Texture:SetTexture(path)
+        self.Texture:SetVertexColor(1, 1, 1, 1)
+        self.Texture:SetTexCoord(0, 1, 0, 1)
+        self.Texture:SetTextureSliceMargins(24, 24, 24, 24)
+        self.Texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        self.Texture:SetAllPoints()
+    end
+
+    frame.SetCloseIcon = function(self, path)
+        if self.close and self.close.icon then
+            self.close.icon:SetTexture(path)
+        end
     end
 
     if not frame.container then
         local container = CreateFrame("Frame", nil, frame)
         frame.container = container
-        container:SetPoint("TOPLEFT", 15, -42)
-        container:SetPoint("BOTTOMRIGHT", -15, 15)
     end
+
+    frame:ApplyChromeLayout()
 
     frame.DisableResize = function(self)
         -- It's still resizeable but button to do it is not there so basically disabled
@@ -246,10 +430,11 @@ local configure = function(frame)
 
     frame.DisableLogoAndVersion = function(self)
         self.logo:Hide()
-        self.HideVersion(true)
+        self:HideVersion(true)
+        self:UpdateTitleAnchor()
     end
 
-    ---@param options {staticAnchor?: table, disableResize?: boolean, disableLogoAndVersion?: boolean, titleSize?: number}
+    ---@param options {staticAnchor?: table, disableResize?: boolean, disableLogoAndVersion?: boolean, titleSize?: number, headerTexture?: string, backgroundTexture?: string, closeIcon?: string, showHeader?: boolean, headerHeight?: number, headerInset?: number, headerButtonGap?: number}
     frame.Configure = function(self, options)
         if (options) then
             if (options.disableResize) then
@@ -264,6 +449,28 @@ local configure = function(frame)
             if (options.titleSize) then
                 self:SetTitleSize(options.titleSize)
             end
+            if (options.headerHeight) then
+                self.headerHeight = options.headerHeight
+            end
+            if (options.headerInset ~= nil) then
+                self.headerInset = options.headerInset
+            end
+            if (options.headerButtonGap ~= nil) then
+                self.headerButtonGap = options.headerButtonGap
+            end
+            if (options.showHeader ~= nil) then
+                self.showHeader = options.showHeader
+            end
+            if (options.headerTexture) then
+                self:SetHeaderTexture(options.headerTexture)
+            end
+            if (options.backgroundTexture) then
+                self:SetBackgroundTexture(options.backgroundTexture)
+            end
+            if (options.closeIcon) then
+                self:SetCloseIcon(options.closeIcon)
+            end
+            self:ApplyChromeLayout()
         end
     end
 
@@ -297,5 +504,15 @@ window.Create = function(self, options)
         f.onClose = options.onClose
     end
 
+    f:SetBackgroundTexture(DEFAULT_CHROME.backgroundTexture)
+    f:SetHeaderTexture(DEFAULT_CHROME.headerTexture)
+    f:SetCloseIcon(DEFAULT_CHROME.closeIcon)
+
+    if options then
+        f:Configure(options)
+    end
+
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(window, 'options-only')

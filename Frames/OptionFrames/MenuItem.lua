@@ -18,65 +18,33 @@ menuItem.Init = function(self)
     self.pool = CreateFramePool('Button', UIParent)
 end
 
+local function ApplyTextState(button, selected, hovered)
+    local th = EXFrames.Theme
+    local color = selected and th.white or (hovered and th.text or th.textMuted)
+    if button.text then
+        button.text:SetTextColor(unpack(color))
+    end
+    if button.icon then
+        button.icon:SetVertexColor(unpack(color))
+    end
+end
+
 local function StyleButton(f, isMain)
     local th = EXFrames.Theme
 
-    local bg = f:CreateTexture(nil, 'BACKGROUND', nil, 1)
-    bg:SetTexture(EXFrames.assets.textures.ui.menuItemBg)
-    bg:SetVertexColor(unpack(th.backgroundDeep))
-    bg:SetTextureSliceMargins(6, 6, 6, 6)
-    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg:SetAllPoints()
-    f.bg = bg
-
-    local bg2 = f:CreateTexture(nil, 'BACKGROUND', nil, 0)
-    bg2:SetTexture(EXFrames.assets.textures.ui.menuItemBg)
-    bg2:SetVertexColor(unpack(th.accent))
-    bg2:SetTextureSliceMargins(27, 27, 27, 27)
-    bg2:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    bg2:SetAllPoints()
-    f.bg2 = bg2
-    bg2:Hide()
-
-    local borderOverlay = f:CreateTexture(nil, 'OVERLAY', nil, 1)
-    borderOverlay:SetTexture(EXFrames.assets.textures.ui.menuItemBorder)
-    borderOverlay:SetVertexColor(unpack(th.border))
-    borderOverlay:SetTextureSliceMargins(6, 6, 6, 6)
-    borderOverlay:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    borderOverlay:SetPoint('TOPLEFT', bg, 'TOPLEFT')
-    borderOverlay:SetPoint('BOTTOMRIGHT', bg, 'BOTTOMRIGHT')
-
-    local border = f:CreateTexture(nil, 'ARTWORK')
-    border:SetTexture(EXFrames.assets.textures.menuItem.border)
-    border:SetTextureSliceMargins(6, 6, 0, 6)
-    border:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    border:SetVertexColor(unpack(th.border))
-    border:SetPoint('TOPLEFT', bg, 'TOPLEFT')
-    border:SetPoint('BOTTOM', bg, 'BOTTOM')
-    border:SetWidth(EXFrames:ScalePixel(5, f))
-    f.border = border
-
-    local glow = f:CreateTexture(nil, 'BORDER')
-    glow:SetTexture(EXFrames.assets.textures.menuItem.glow)
-    glow:SetVertexColor(unpack(th.accent))
-    glow:SetTextureSliceMargins(10, 10, 10, 10)
-    glow:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    glow:SetPoint('TOPLEFT', bg, 'TOPLEFT')
-    glow:SetPoint('BOTTOM', bg, 'BOTTOM')
-    glow:SetWidth(EXFrames:ScalePixel(60, f))
-    glow:Hide()
-    f.glow = glow
-
     local text = f:CreateFontString(nil, 'OVERLAY')
-    text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
-    text:SetPoint('LEFT', bg, 'LEFT', 10, 0)
-    text:SetWidth(0)
+    text:SetFont(EXFrames.assets.font.default(), 13, '')
+    text:SetPoint('LEFT', 8, 0)
+    text:SetJustifyH('LEFT')
+    text:SetWordWrap(false)
+    text:SetTextColor(unpack(th.textMuted))
     f.text = text
 
     if (isMain) then
         local icon = f:CreateTexture(nil, 'OVERLAY')
         icon:SetSize(COMPACT_ICON_SIZE, COMPACT_ICON_SIZE)
         icon:SetPoint('CENTER')
+        icon:SetVertexColor(unpack(th.textMuted))
         icon:Hide()
         icon:SetAlpha(0)
         f.icon = icon
@@ -86,40 +54,31 @@ local function StyleButton(f, isMain)
         expand:SetPropagateMouseMotion(true)
         expand:EnableMouse(false)
         expand:SetSize(16, 16)
-        expand:SetPoint('RIGHT', bg, 'RIGHT', -10, 0)
-
-        local expandBg = expand:CreateTexture(nil, 'BACKGROUND')
-        expandBg:SetTexture(EXFrames.assets.textures.solidWhite)
-        expandBg:SetVertexColor(unpack(EXFrames.Theme.backgroundPanel))
-        expandBg:SetAllPoints()
-        expand.bg = expandBg
+        expand:SetPoint('RIGHT', -4, 0)
 
         local expandIcon = expand:CreateTexture(nil, 'ARTWORK')
-        expandIcon:SetTexture(EXFrames.assets.textures.menuItem.plus)
+        expandIcon:SetTexture(EXFrames.assets.textures.icon.chevronDown)
         expandIcon:SetSize(8, 8)
         expandIcon:SetPoint('CENTER')
+        expandIcon:SetVertexColor(unpack(th.textMuted))
+        expandIcon:SetRotation(math.rad(-90))
         expand.icon = expandIcon
 
         f.expand = expand
-
         expand:Hide()
+        text:SetPoint('RIGHT', expand, 'LEFT', -4, 0)
+    else
+        text:SetPoint('RIGHT', -8, 0)
     end
 
     f:SetScript('OnEnter', function(self)
-        self.bg:ClearAllPoints()
-        self.bg:SetPoint('TOPLEFT', -2, 2)
-        self.bg:SetPoint('BOTTOMRIGHT', -2, 2)
-        self.bg2:Show()
-
-        if (self.icon and self.icon:IsShown()) then
-            self.icon:ClearAllPoints()
-            self.icon:SetPoint('CENTER', -2, 2)
-        end
+        local selected = (self.__owner and self.__owner.main == self) and self.__owner.isSelected or self.isSelected
+        ApplyTextState(self, selected, true)
 
         local owner = self.__owner
         if (owner and owner.isCompact and owner.tooltipText) then
             if (not owner.tooltip) then
-                owner.tooltip = EXFrames:GetFrame('tooltip'):Get({ text = owner.tooltipText }, self)
+                owner.tooltip = EXFrames:GetFrame('tooltip'):Create(self, { text = owner.tooltipText })
             else
                 owner.tooltip:SetText(owner.tooltipText)
             end
@@ -128,14 +87,8 @@ local function StyleButton(f, isMain)
     end)
 
     f:SetScript('OnLeave', function(self)
-        self.bg:ClearAllPoints()
-        self.bg:SetAllPoints()
-        self.bg2:Hide()
-
-        if (self.icon) then
-            self.icon:ClearAllPoints()
-            self.icon:SetPoint('CENTER')
-        end
+        local selected = (self.__owner and self.__owner.main == self) and self.__owner.isSelected or self.isSelected
+        ApplyTextState(self, selected, false)
 
         local owner = self.__owner
         if (owner and owner.tooltip) then
@@ -161,7 +114,6 @@ local function ApplyCompactLayout(f, compact)
         f.main:ClearAllPoints()
         f.main:SetAllPoints()
         f.main.expand:Hide()
-        f.main.glow:SetWidth(EXFrames:ScalePixel(COMPACT_SIZE, f.main))
         f.main.text:Hide()
         f.main.icon:Show()
         f.main.icon:SetAlpha(1)
@@ -172,7 +124,6 @@ local function ApplyCompactLayout(f, compact)
         f.main:ClearAllPoints()
         f.main:SetPoint('TOPLEFT')
         f.main:SetPoint('RIGHT')
-        f.main.glow:SetWidth(EXFrames:ScalePixel(60, f.main))
         f.main.text:Show()
         f.main.text:SetAlpha(1)
         f.main.icon:Hide()
@@ -181,6 +132,7 @@ local function ApplyCompactLayout(f, compact)
             f.main.expand:Show()
         end
     end
+    ApplyTextState(f.main, f.isSelected, false)
 end
 
 local function ConfigureFrame(f)
@@ -281,16 +233,8 @@ local function ConfigureFrame(f)
         subButton.onClick = nil
         subButton.isSelected = false
 
-        subButton.bg:SetVertexColor(unpack(EXFrames.Theme.backgroundLight))
-
         subButton:Observe('isSelected', function(selected, _, _, self)
-            if (selected) then
-                self.glow:Show()
-                self.border:SetVertexColor(unpack(EXFrames.Theme.borderActive))
-            else
-                self.glow:Hide()
-                self.border:SetVertexColor(unpack(EXFrames.Theme.border))
-            end
+            ApplyTextState(self, selected, self:IsMouseOver())
         end)
 
         subButton:SetScript('OnClick', function(self)
@@ -318,6 +262,7 @@ local function ConfigureFrame(f)
             self.subButtons[idx].text:SetText(item.name)
             self.subButtons[idx].onClick = item.onClick
             self.subButtons[idx].data = item.data
+            ApplyTextState(self.subButtons[idx], self.subButtons[idx].isSelected, false)
 
             local prev = self.subButtons[idx - 1]
             if (prev) then
@@ -347,13 +292,7 @@ local function ConfigureFrame(f)
     end
 
     f:Observe('isSelected', function(selected, _, _, self)
-        if (selected) then
-            self.main.glow:Show()
-            self.main.border:SetVertexColor(unpack(EXFrames.Theme.borderActive))
-        else
-            self.main.glow:Hide()
-            self.main.border:SetVertexColor(unpack(EXFrames.Theme.border))
-        end
+        ApplyTextState(self.main, selected, self.main:IsMouseOver())
     end)
 
     f:Observe('isExpanded', function(expanded, _, _, self)
@@ -362,10 +301,10 @@ local function ConfigureFrame(f)
         end
         if (expanded) then
             self:Expand()
-            self.main.expand.icon:SetTexture(EXFrames.assets.textures.menuItem.minus)
+            self.main.expand.icon:SetRotation(0)
         else
             self:Collapse()
-            self.main.expand.icon:SetTexture(EXFrames.assets.textures.menuItem.plus)
+            self.main.expand.icon:SetRotation(math.rad(-90))
         end
     end)
 
@@ -414,8 +353,14 @@ menuItem.Create = function(self, parent)
     if (f.configured) then
         f.isExpandable = false
         f.isExpanded = false
+        f.isSelected = false
         f.onClick = nil
         f._navModule = nil
+        if f.main.expand then
+            f.main.expand:Hide()
+            f.main.expand.icon:SetRotation(math.rad(-90))
+        end
+        ApplyTextState(f.main, false, false)
         if (f.isCompact) then
             f.isCompact = false
             ApplyCompactLayout(f, false)
@@ -429,3 +374,5 @@ menuItem.Create = function(self, parent)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(menuItem, 'parent-only')

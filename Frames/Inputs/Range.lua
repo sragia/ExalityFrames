@@ -280,8 +280,12 @@ local function ConfigureFrame(f)
         if barWidth < 1 then return end
         local trackWidth = barWidth - self.trackInset * 2
         if trackWidth < 1 then return end
+        local value = tonumber(self.value)
+        if not value then
+            return
+        end
         local rangeSpan = self.max - self.min
-        local perc = rangeSpan > 0 and math.max(0, math.min(1, (self.value - self.min) / rangeSpan)) or 0
+        local perc = rangeSpan > 0 and math.max(0, math.min(1, (value - self.min) / rangeSpan)) or 0
         local sparkX = self.trackInset + perc * trackWidth
         self:ApplySparkLayout(sparkX)
     end
@@ -327,6 +331,7 @@ local function ConfigureFrame(f)
         self:SetLabel(option.label)
         self.suppressOnChange = true
         local value = option.currentValue and option.currentValue() or self.min
+        value = tonumber(value) or self.min
         self:SetValue('value', value)
         self.suppressOnChange = false
         self:UpdateSparkPosition()
@@ -368,3 +373,5 @@ range.Create = function(self)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(range)

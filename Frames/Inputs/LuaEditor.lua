@@ -80,3 +80,5 @@ luaEditor.Create = function(self, options, parent)
     scrollFrame:Show()
     return scrollFrame
 end
+
+EXFrames.FrameBase.StandardizeCreate(luaEditor)

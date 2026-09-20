@@ -51,3 +51,5 @@ scrollFrame.Create = function(self)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(scrollFrame)

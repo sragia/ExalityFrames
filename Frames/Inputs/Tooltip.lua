@@ -85,3 +85,6 @@ tooltip.Get = function(self, options, parent)
 
     return tooltip
 end
+
+tooltip.Create = tooltip.Get
+EXFrames.FrameBase.StandardizeCreate(tooltip)

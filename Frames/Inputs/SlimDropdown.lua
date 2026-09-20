@@ -236,3 +236,5 @@ slimDropdown.Create = function(self, options, parent)
     input:Show()
     return input
 end
+
+EXFrames.FrameBase.StandardizeCreate(slimDropdown)

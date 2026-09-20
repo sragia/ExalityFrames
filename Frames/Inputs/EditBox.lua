@@ -73,12 +73,14 @@ local function ConfigureFrame(f, options)
     end
 
     f.SetEditorValue = function(self, value)
-        input:SetText(value)
+        input:SetText(value or '')
     end
 
     f.GetEditorValue = function(self)
         return input:GetText()
     end
+
+    f.SetInputValue = f.SetEditorValue
 
     local function setBorderActive(active)
         inputArea:SetInputBorderActive(active)
@@ -158,3 +160,5 @@ editBox.Create = function(self, options, parent)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(editBox)

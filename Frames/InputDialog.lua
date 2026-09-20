@@ -109,6 +109,8 @@ local function ConfigureFrame(f)
   f.SetOnSuccess = function(self, onSuccess)
     self.onSuccess = onSuccess
   end
+
+  f.configured = true
 end
 
 ---Create Dialog Frame
@@ -124,3 +126,5 @@ inputDialog.Create = function(self)
 
   return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(inputDialog)

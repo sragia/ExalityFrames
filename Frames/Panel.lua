@@ -24,13 +24,34 @@ local configure = function(frame)
     border:SetTextureSliceMargins(8, 8, 8, 8)
     border:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
     border:SetAllPoints()
+    frame.Border = border
 
     frame.Destroy = function(self)
         panel.pool:Release(self)
     end
 
     frame.SetBackgroundColor = function(self, r, g, b, a)
+        a = a or 1
         self.Texture:SetVertexColor(r, g, b, a)
+        self.Texture:SetShown(a > 0)
+        if self.Border then
+            self.Border:SetShown(a > 0)
+        end
+    end
+
+    frame.SetBorderColor = function(self, r, g, b, a)
+        if not self.Border then
+            return
+        end
+        a = a or 1
+        self.Border:SetVertexColor(r, g, b, a)
+        self.Border:SetShown(a > 0)
+    end
+
+    frame.SetSubtleChrome = function(self)
+        local fill = EXFrames.Theme.backgroundDeep
+        self:SetBackgroundColor(fill[1], fill[2], fill[3], 0.16)
+        self:SetBorderColor(0, 0, 0, 0.34)
     end
 
     frame.configured = true
@@ -47,3 +68,5 @@ panel.Create = function(self)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(panel)

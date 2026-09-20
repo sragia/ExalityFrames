@@ -628,3 +628,5 @@ spellIdInput.Create = function(self, options, parent)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(spellIdInput)

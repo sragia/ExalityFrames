@@ -102,3 +102,5 @@ moduleItem.Create = function(self, options, parent)
 
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(moduleItem)

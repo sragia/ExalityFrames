@@ -284,12 +284,12 @@ local configure = function(f)
     f.leftWidth = 135
 
     local leftPanel = EXFrames:GetFrame('panel-frame'):Create()
-    leftPanel:SetBackgroundColor(0.05, 0.05, 0.05, 0.8)
+    leftPanel:SetSubtleChrome()
     leftPanel:SetParent(f)
     f.leftPanel = leftPanel
 
     local rightPanel = EXFrames:GetFrame('panel-frame'):Create()
-    rightPanel:SetBackgroundColor(0.05, 0.05, 0.05, 0.8)
+    rightPanel:SetSubtleChrome()
     rightPanel:SetParent(f)
     f.rightPanel = rightPanel
 
@@ -606,3 +606,5 @@ splitOptions.Create = function(self)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(splitOptions)

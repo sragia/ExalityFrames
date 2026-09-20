@@ -545,7 +545,23 @@ end
 ---@return FRAME
 dropdown.Create = function(self, options, parent)
     local input = self.pool:Acquire()
-    ConfigureFrame(input, options)
+    if not input.configured then
+        ConfigureFrame(input, options or {})
+        input.configured = true
+    elseif options then
+        if options.initial then
+            input:SetValue('value', options.initial)
+        end
+        if options.onChange then
+            input.onChange = options.onChange
+        end
+        if options.label then
+            input:SetLabel(options.label)
+        end
+        if options.options then
+            input:SetOptions(options.options)
+        end
+    end
     if (parent) then
         input:SetParent(parent)
     else
@@ -560,3 +576,5 @@ dropdown.Create = function(self, options, parent)
     input:Show()
     return input
 end
+
+EXFrames.FrameBase.StandardizeCreate(dropdown)
