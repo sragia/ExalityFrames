@@ -157,13 +157,27 @@ local function configureRow(row, entry, theme, parentPanel)
         end
     end)
     row:SetScript('OnClick', function(btn, button)
-        if btn.listEntry and btn.listEntry.onClick then
-            pcall(btn.listEntry.onClick, btn, button)
+        local entry = btn.listEntry
+        local keepOpen = false
+        if entry and entry.onClick then
+            local ok, result = pcall(entry.onClick, btn, button)
+            keepOpen = ok and result == false
+        end
+        if keepOpen or not entry or not entry.onClick or entry.isHeader then
+            return
         end
         if parentPanel then
             parentPanel:Hide()
         end
     end)
+
+    if entry.isHeader then
+        row:EnableMouse(false)
+        row.bg:SetVertexColor(unpackColor(nil, theme.backgroundDeep))
+        row.label:SetTextColor(unpackColor(entry.color or theme.textMuted, theme.textMuted))
+    else
+        row:EnableMouse(true)
+    end
 end
 
 local function createPanel(frameName)

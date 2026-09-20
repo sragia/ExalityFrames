@@ -58,7 +58,7 @@ end
 
 local function SyncChildWidth(f, preferredWidth)
     local maxScroll = GetMaxScroll(f)
-    local scrollbarSpace = maxScroll > 0 and GetScrollbarSpace(f) or 0
+    local scrollbarSpace = (maxScroll > 0 and not f.hideScrollbar) and GetScrollbarSpace(f) or 0
     local availableWidth = math.max(1, f:GetWidth() - scrollbarSpace)
     local width = preferredWidth and math.min(preferredWidth, availableWidth) or availableWidth
     if math.abs(f.child:GetWidth() - width) > 0.5 then
@@ -94,6 +94,9 @@ local function ApplyScroll(f, value)
     f.child:ClearAllPoints()
     f.child:SetPoint('TOPLEFT', f.content, 'TOPLEFT', 0, value)
     UpdateThumbPosition(f)
+    if f.onScroll then
+        f.onScroll(f, f.scrollOffset)
+    end
 end
 
 local function GetCursorYInRegion(region)
@@ -153,7 +156,7 @@ local function UpdateContentInsets(f)
     local maxScroll = GetMaxScroll(f)
 
     f.content:ClearAllPoints()
-    if maxScroll > 0 then
+    if maxScroll > 0 and not f.hideScrollbar then
         f.scrollBar:Show()
         f.content:SetPoint('TOPLEFT', 0, 0)
         f.content:SetPoint('BOTTOMRIGHT', -GetScrollbarSpace(f), 0)
@@ -256,18 +259,24 @@ local function ConfigureFrame(f)
         EnsureOnUpdate(f)
     end)
 
-    local function OnMouseWheel(self, delta)
-        local maxScroll = GetMaxScroll(f)
+    f.HandleMouseWheel = function(self, delta)
+        local maxScroll = GetMaxScroll(self)
         if maxScroll <= 0 then
             return
         end
 
-        f.targetScroll = math.max(0, math.min(f.targetScroll + (delta > 0 and -1 or 1) * f.scrollStep, maxScroll))
-        EnsureOnUpdate(f)
+        self.targetScroll = math.max(0, math.min(self.targetScroll + (delta > 0 and -1 or 1) * self.scrollStep, maxScroll))
+        EnsureOnUpdate(self)
+    end
+
+    local function OnMouseWheel(_, delta)
+        f:HandleMouseWheel(delta)
     end
 
     f:SetScript('OnMouseWheel', OnMouseWheel)
     content:SetScript('OnMouseWheel', OnMouseWheel)
+    child:EnableMouseWheel(true)
+    child:SetScript('OnMouseWheel', OnMouseWheel)
 
     f.UpdateScrollbar = function(self)
         UpdateContentInsets(self)
@@ -325,6 +334,7 @@ local function ConfigureFrame(f)
 
     f.Reset = function(self)
         self.draggingThumb = false
+        self.hideScrollbar = false
         self:SetScript('OnUpdate', nil)
         self.smoothUpdateActive = false
         self.scrollOffset = 0
