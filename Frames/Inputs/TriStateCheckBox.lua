@@ -20,6 +20,12 @@ local STATE_OFF = 0
 local STATE_INCLUDE = 1
 local STATE_NEGATE = 2
 
+local BOX_SIZE = 18
+local MARK_SIZE = 12
+local X_SIZE = 11
+local ROW_HEIGHT = 20
+local LABEL_GAP = 6
+
 local function normalizeState(state)
     local value = tonumber(state)
     if value == STATE_INCLUDE or value == STATE_NEGATE then
@@ -28,23 +34,40 @@ local function normalizeState(state)
     return STATE_OFF
 end
 
+local function setTintedFill(tex, path, color)
+    tex:SetTexture(path)
+    tex:SetAllPoints()
+    tex:SetVertexColor(unpack(color))
+end
+
+local function setTintedIcon(tex, path, color, size, anchorFrame)
+    tex:SetTexture(path)
+    tex:SetSize(size, size)
+    tex:SetPoint('CENTER', anchorFrame, 'CENTER')
+    tex:SetVertexColor(unpack(color))
+end
+
 local function ApplyStateVisual(f, state)
     local th = EXFrames.Theme
     state = normalizeState(state)
 
+    local bg = f.hovering and th.backgroundLight or th.background
+    f.boxBg:SetVertexColor(unpack(bg))
+    f.checkMark:Hide()
+    f.negateMark:Hide()
+
     if state == STATE_INCLUDE then
-        f.Mark:Show()
-        f.Mark:SetVertexColor(unpack(th.text))
-        f.NegateMark:Hide()
+        f.boxBorder:SetVertexColor(unpack(th.accent))
+        f.checkMark:SetVertexColor(unpack(th.accent))
+        f.checkMark:Show()
         f.Label:SetTextColor(unpack(th.text))
     elseif state == STATE_NEGATE then
-        f.Mark:Hide()
-        f.NegateMark:Show()
-        f.NegateMark:SetVertexColor(unpack(th.danger))
+        f.boxBorder:SetVertexColor(unpack(th.danger))
+        f.negateMark:SetVertexColor(unpack(th.danger))
+        f.negateMark:Show()
         f.Label:SetTextColor(unpack(th.danger))
     else
-        f.Mark:Hide()
-        f.NegateMark:Hide()
+        f.boxBorder:SetVertexColor(unpack(th.border))
         f.Label:SetTextColor(unpack(th.text))
     end
 end
@@ -52,47 +75,36 @@ end
 local function ConfigureFrame(f)
     f.state = STATE_OFF
     f:EnableMouse(true)
-    f:SetSize(1, 20)
+    f:SetHeight(ROW_HEIGHT)
 
-    local base = f:CreateTexture(nil, 'ARTWORK')
-    base:SetTexture(EXFrames.assets.textures.input.checkbox.base)
-    base:SetSize(15, 15)
-    base:SetPoint('LEFT')
-    f.Base = base
+    local th = EXFrames.Theme
+    local cb = EXFrames.assets.textures.input.checkbox
 
-    local hover = f:CreateTexture(nil, 'OVERLAY')
-    hover:SetTexture(EXFrames.assets.textures.input.checkbox.hover)
-    hover:SetSize(15, 15)
-    hover:SetPoint('CENTER', base, 'CENTER')
-    hover:SetAlpha(0)
-    f.Hover = hover
+    local box = CreateFrame('Frame', nil, f)
+    box:SetSize(BOX_SIZE, BOX_SIZE)
+    box:SetPoint('LEFT')
+    f.box = box
 
-    local mark = f:CreateTexture(nil, 'OVERLAY')
-    mark:SetTexture(EXFrames.assets.textures.input.checkbox.mark)
-    mark:SetSize(20, 15)
-    mark:SetPoint('CENTER', base, 'CENTER', 2, 1)
-    mark:Hide()
-    f.Mark = mark
+    f.boxBg = box:CreateTexture(nil, 'BACKGROUND')
+    setTintedFill(f.boxBg, cb.bg, th.background)
 
-    local negateMark = f:CreateTexture(nil, 'OVERLAY')
-    negateMark:SetTexture(EXFrames.assets.textures.icon.closeBold)
-    negateMark:SetSize(11, 11)
-    negateMark:SetPoint('CENTER', base, 'CENTER')
-    negateMark:Hide()
-    f.NegateMark = negateMark
+    f.boxBorder = box:CreateTexture(nil, 'ARTWORK')
+    setTintedFill(f.boxBorder, cb.border, th.border)
+
+    f.checkMark = box:CreateTexture(nil, 'OVERLAY')
+    setTintedIcon(f.checkMark, cb.markIcon, th.accent, MARK_SIZE, box)
+    f.checkMark:Hide()
+
+    f.negateMark = box:CreateTexture(nil, 'OVERLAY')
+    setTintedIcon(f.negateMark, cb.x, th.danger, X_SIZE, box)
+    f.negateMark:Hide()
 
     local label = f:CreateFontString(nil, 'OVERLAY')
     label:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
-    label:SetPoint('LEFT', base, 'RIGHT', 5, -1)
+    label:SetTextColor(unpack(th.text))
+    label:SetPoint('LEFT', box, 'RIGHT', LABEL_GAP, 0)
     label:SetWidth(0)
     f.Label = label
-
-    f:SetScript('OnEnter', function(self)
-        self.Hover:SetAlpha(1)
-    end)
-    f:SetScript('OnLeave', function(self)
-        self.Hover:SetAlpha(0)
-    end)
 
     f.SetLabel = function(self, text)
         self.Label:SetText(text)
@@ -110,6 +122,18 @@ local function ConfigureFrame(f)
     f.GetState = function(self)
         return normalizeState(self.state)
     end
+
+    f.hovering = false
+
+    f:SetScript('OnEnter', function(self)
+        self.hovering = true
+        ApplyStateVisual(self, self.state)
+    end)
+
+    f:SetScript('OnLeave', function(self)
+        self.hovering = false
+        ApplyStateVisual(self, self.state)
+    end)
 
     f:SetScript('OnMouseDown', function(self)
         local currentState = self:GetState()
@@ -150,15 +174,19 @@ triStateCheckbox.Create = function(self)
         ConfigureFrame(f)
     else
         f.state = STATE_OFF
+        f.hovering = false
         ApplyStateVisual(f, STATE_OFF)
     end
+
     f.Destroy = function(self)
         self.onChange = nil
         self.suppressOnChange = nil
+        self.hovering = false
         self.state = STATE_OFF
         ApplyStateVisual(self, STATE_OFF)
         triStateCheckbox.pool:Release(self)
     end
+
     f:Show()
     return f
 end

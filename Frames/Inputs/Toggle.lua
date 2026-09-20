@@ -13,115 +13,104 @@ toggle.Init = function(self)
     self.pool = CreateFramePool('Frame', UIParent)
 end
 
+-- @3x art → 1× UI units (132×72 track, 60×60 orb)
+local SWITCH_WIDTH = 44
+local SWITCH_HEIGHT = 23
+local ORB_SIZE = 20
+local ORB_PAD = 2
+local LABEL_GAP = 6
+
+local function setTinted(tex, path, color)
+    tex:SetTexture(path)
+    tex:SetAllPoints()
+    tex:SetVertexColor(unpack(color))
+end
+
 ---@param f Frame
 ---@param options ToggleOptions
 local function ConfigureFrame(f, options)
     EXFrames.utils.addObserver(f)
-    f:SetSize(49, 20)
+    f:EnableMouse(true)
 
     local th = EXFrames.Theme
-    local SWITCH_WIDTH = 49
+    local tex = EXFrames.assets.textures.input
 
     local switch = CreateFrame('Frame', nil, f)
-    switch:SetSize(SWITCH_WIDTH, 20)
+    switch:SetSize(SWITCH_WIDTH, SWITCH_HEIGHT)
     switch:SetPoint('LEFT')
     f.switch = switch
 
-    local base = switch:CreateTexture(nil, 'ARTWORK')
-    base:SetTexture(EXFrames.assets.textures.input.toggle)
-    base:SetTexCoord(1 / 256, 167 / 256, 181 / 256, 248 / 256)
-    base:SetVertexColor(unpack(th.backgroundDeep))
-    base:SetAllPoints()
+    f.trackBg = switch:CreateTexture(nil, 'BACKGROUND')
+    setTinted(f.trackBg, tex.toggleBg, th.background)
 
-    local borderDisabled = switch:CreateTexture(nil, 'ARTWORK')
-    borderDisabled:SetTexture(EXFrames.assets.textures.input.toggle)
-    borderDisabled:SetTexCoord(1 / 256, 167 / 256, 90 / 256, 157 / 256)
-    borderDisabled:SetVertexColor(unpack(th.border))
-    borderDisabled:SetAllPoints()
+    f.trackBorder = switch:CreateTexture(nil, 'ARTWORK')
+    setTinted(f.trackBorder, tex.toggleBgBorder, th.border)
 
-    local borderEnabled = switch:CreateTexture(nil, 'ARTWORK')
-    borderEnabled:SetTexture(EXFrames.assets.textures.input.toggle)
-    borderEnabled:SetTexCoord(1 / 256, 167 / 256, 1 / 256, 68 / 256)
-    borderEnabled:SetVertexColor(unpack(th.accent))
-    borderEnabled:SetAllPoints()
-    borderEnabled:SetAlpha(0)
+    local orb = CreateFrame('Frame', nil, switch)
+    orb:SetSize(ORB_SIZE, ORB_SIZE)
+    f.orb = orb
 
-    local thumbDisabled = switch:CreateTexture(nil, 'OVERLAY')
-    thumbDisabled:SetTexture(EXFrames.assets.textures.input.toggle)
-    thumbDisabled:SetTexCoord(176 / 256, 255 / 256, 84 / 256, 163 / 256)
-    thumbDisabled:SetVertexColor(unpack(th.gray))
-    thumbDisabled:SetSize(25, 25)
-    thumbDisabled:SetPoint('CENTER', base, 'LEFT', 10, 0)
+    f.orbFill = orb:CreateTexture(nil, 'BACKGROUND')
+    setTinted(f.orbFill, tex.toggleOrb, th.backgroundLight)
 
-    local thumbEnabled = switch:CreateTexture(nil, 'OVERLAY')
-    thumbEnabled:SetTexture(EXFrames.assets.textures.input.toggle)
-    thumbEnabled:SetTexCoord(176 / 256, 255 / 256, 1 / 256, 80 / 256)
-    thumbEnabled:SetVertexColor(unpack(th.accent))
-    thumbEnabled:SetSize(25, 25)
-    thumbEnabled:SetPoint('CENTER', base, 'LEFT', 10, 0)
-    thumbEnabled:SetAlpha(0)
+    f.orbBorder = orb:CreateTexture(nil, 'ARTWORK')
+    setTinted(f.orbBorder, tex.toggleBorder, th.border)
 
-    local duration = 0.2
-    local moveBy = 29
+    f.orbPadTop = 2
 
-    -- KMS part
-    local thumbEnabledEnableGroup = EXFrames.utils.animation.getAnimationGroup(thumbEnabled)
-    EXFrames.utils.animation.fade(thumbEnabled, duration, 0, 1, thumbEnabledEnableGroup)
-    EXFrames.utils.animation.move(thumbEnabled, duration, moveBy, 0, thumbEnabledEnableGroup)
-
-    local thumbEnabledDisableGroup = EXFrames.utils.animation.getAnimationGroup(thumbEnabled)
-    EXFrames.utils.animation.fade(thumbEnabled, duration, 1, 0, thumbEnabledDisableGroup)
-    EXFrames.utils.animation.move(thumbEnabled, duration, -moveBy, 0, thumbEnabledDisableGroup)
-
-    local thumbDisabledEnableGroup = EXFrames.utils.animation.getAnimationGroup(thumbDisabled)
-    EXFrames.utils.animation.fade(thumbDisabled, duration, 1, 0, thumbDisabledEnableGroup)
-    EXFrames.utils.animation.move(thumbDisabled, duration, moveBy, 0, thumbDisabledEnableGroup)
-
-    local thumbDisabledDisableGroup = EXFrames.utils.animation.getAnimationGroup(thumbDisabled)
-    EXFrames.utils.animation.fade(thumbDisabled, duration, 0, 1, thumbDisabledDisableGroup)
-    EXFrames.utils.animation.move(thumbDisabled, duration, -moveBy, 0, thumbDisabledDisableGroup)
-
-    local borderDisabledDisableGroup = EXFrames.utils.animation.getAnimationGroup(borderDisabled)
-    EXFrames.utils.animation.fade(borderDisabled, duration, 0, 1, borderDisabledDisableGroup)
-    local borderDisabledEnableGroup = EXFrames.utils.animation.getAnimationGroup(borderDisabled)
-    EXFrames.utils.animation.fade(borderDisabled, duration, 1, 0, borderDisabledEnableGroup)
-
-    local borderEnabledDisableGroup = EXFrames.utils.animation.getAnimationGroup(borderEnabled)
-    EXFrames.utils.animation.fade(borderEnabled, duration, 1, 0, borderEnabledDisableGroup)
-    local borderEnabledEnableGroup = EXFrames.utils.animation.getAnimationGroup(borderEnabled)
-    EXFrames.utils.animation.fade(borderEnabled, duration, 0, 1, borderEnabledEnableGroup)
-
-
-    f.Enable = function(self)
-        self.enabled = true
-        thumbEnabledEnableGroup:Play(false, self.disableAnim and duration or 0)
-        thumbDisabledEnableGroup:Play(false, self.disableAnim and duration or 0)
-        borderDisabledEnableGroup:Play(false, self.disableAnim and duration or 0)
-        borderEnabledEnableGroup:Play(false, self.disableAnim and duration or 0)
+    local function placeOrb(left)
+        f.orb:ClearAllPoints()
+        f.orb:SetPoint('TOP', switch, 'TOP', 0, -f.orbPadTop)
+        if left then
+            f.orb:SetPoint('LEFT', switch, 'LEFT', ORB_PAD, 0)
+        else
+            f.orb:SetPoint('RIGHT', switch, 'RIGHT', -ORB_PAD, 0)
+        end
     end
 
-    f.Disable = function(self)
-        self.enabled = false
-        thumbEnabledDisableGroup:Play(false, self.disableAnim and duration or 0)
-        thumbDisabledDisableGroup:Play(false, self.disableAnim and duration or 0)
-        borderDisabledDisableGroup:Play(false, self.disableAnim and duration or 0)
-        borderEnabledDisableGroup:Play(false, self.disableAnim and duration or 0)
+    f.hovering = false
+
+    f.ApplyVisualState = function(self, on)
+        if on then
+            local track = self.hovering and th.accentLight or th.accent
+            self.trackBg:SetVertexColor(unpack(track))
+        else
+            local track = self.hovering and th.backgroundLight or th.background
+            self.trackBg:SetVertexColor(unpack(track))
+        end
+        self.trackBorder:SetVertexColor(unpack(th.border))
+        self.orbFill:SetVertexColor(unpack(th.backgroundLight))
+        self.orbBorder:SetVertexColor(unpack(th.border))
+
+        placeOrb(not on)
     end
 
     f.Toggle = function(self)
-        f:SetValue('value', not f.value)
+        self:SetValue('value', not self.value)
     end
+
+    f:SetScript('OnEnter', function(self)
+        self.hovering = true
+        self:ApplyVisualState(self.value)
+    end)
+
+    f:SetScript('OnLeave', function(self)
+        self.hovering = false
+        self:ApplyVisualState(self.value)
+    end)
 
     f:SetScript('OnMouseDown', function(self)
         self:Toggle()
     end)
+
+    f:SetHeight(SWITCH_HEIGHT)
 
     local text = f:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
     text:SetTextColor(unpack(th.text))
     text:SetJustifyH('LEFT')
     text:SetWordWrap(false)
-    text:SetPoint('LEFT', switch, 'RIGHT', 10, 0)
+    text:SetPoint('LEFT', switch, 'RIGHT', LABEL_GAP, 0)
     text:SetPoint('RIGHT', f, 'RIGHT', 0, 0)
     text:SetText(options.text)
     f.label = text
@@ -133,39 +122,37 @@ local function ConfigureFrame(f, options)
     secondaryText:SetJustifyH('LEFT')
     secondaryText:SetWordWrap(false)
     secondaryText:SetTextColor(unpack(th.textMuted))
-    secondaryText:SetText(options.secondaryText or "")
+    secondaryText:SetText(options.secondaryText or '')
     f.secondaryText = secondaryText
 
-    f.SetSecondaryText = function(self, text)
+    f.SetSecondaryText = function(self, label)
         self.label:ClearAllPoints()
         self.label:SetPoint('RIGHT', self, 'RIGHT', 0, 0)
-        if (not text or text == '') then
-            self.label:SetPoint('LEFT', switch, 'RIGHT', 10, 0)
+        if not label or label == '' then
+            self.label:SetPoint('LEFT', switch, 'RIGHT', LABEL_GAP, 0)
             self.secondaryText:SetText('')
             return
         end
-        self.label:SetPoint('TOPLEFT', switch, 'TOPRIGHT', 10, 0)
-        self.secondaryText:SetText(text)
+        self.label:SetPoint('TOPLEFT', switch, 'TOPRIGHT', LABEL_GAP, 0)
+        self.secondaryText:SetText(label)
     end
 
     f.SetOptionData = function(self, option)
         self.optionData = option
         self.label:SetText(option.label)
-        if (option.onChange) then
+        if option.onChange then
             self.onChange = option.onChange
         end
-        if (option.onClick) then
+        if option.onClick then
             self.onClick = option.onClick
         end
-        if (option.description) then
+        if option.description then
             self:SetSecondaryText(option.description)
         end
         if option.currentValue then
             local prevSuppress = self.suppressOnChange
             self.suppressOnChange = true
-            self.disableAnim = true
             self:SetValue('value', option.currentValue())
-            self.disableAnim = false
             self.suppressOnChange = prevSuppress
         end
     end
@@ -185,57 +172,50 @@ toggle.Create = function(self, options, parent)
     ---@type FRAME
     local input = self.pool:Acquire()
     input.value = false
-    if (not input.isConfigured) then
+    options = options or {}
+    if not input.isConfigured then
         ConfigureFrame(input, options)
     end
 
-    if (parent) then
+    if parent then
         input:SetParent(parent)
     else
         input:SetParent(nil)
     end
 
+    input.hovering = false
+
     input.Destroy = function(self)
         self.onChange = nil
         self.suppressOnChange = nil
         self._valueObserver = nil
+        self.hovering = false
         self:ClearObservable()
         self:SetSecondaryText()
         toggle.pool:Release(self)
     end
 
-    if (options.text) then
+    if options.text then
         input.label:SetText(options.text)
     end
 
-    if (options.secondaryText) then
+    if options.secondaryText then
         input:SetSecondaryText(options.secondaryText)
     end
 
-    input.disableAnim = true
     input:SetValue('value', options.value)
-
-    if (options.value and not input.enabled) then
-        input:Enable()
-    elseif (not options.value and input.enabled) then
-        input:Disable()
-    end
-    input.disableAnim = false
 
     if not input._valueObserver then
         input._valueObserver = true
         input:Observe('value', function(value)
-            if (value and not input.enabled) then
-                input:Enable()
-            elseif (not value and input.enabled) then
-                input:Disable()
-            end
-            if (input.onChange and not input.suppressOnChange) then
+            input:ApplyVisualState(value)
+            if input.onChange and not input.suppressOnChange then
                 input.onChange(value)
             end
         end)
     end
 
+    input:ApplyVisualState(input.value)
     input:Show()
     return input
 end

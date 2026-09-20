@@ -38,7 +38,9 @@ end
 local function relayoutOptionsGrid()
     C_Timer.After(0, function()
         local optionsFields = EXUI:GetModule('options-fields')
-        if optionsFields and optionsFields.fields and optionsFields.container then
+        if optionsFields and optionsFields.layoutRoot and optionsFields.LayoutMountedFields then
+            optionsFields:LayoutMountedFields()
+        elseif optionsFields and optionsFields.fields and optionsFields.container then
             EXUI.utils.organizeFramesInGrid('fields', optionsFields.fields, 10, optionsFields.container, 10, 10)
             if optionsFields.splitView and optionsFields.container == optionsFields.splitView.container and optionsFields.splitView.UpdateScroll then
                 optionsFields.splitView:UpdateScroll()
@@ -49,10 +51,11 @@ local function relayoutOptionsGrid()
             end
         end
 
-        -- Unit Frame Aura Editor hosts its own field grid outside options-fields.
-        local auraEditor = EXUI:GetModule('uf-aura-editor')
-        if auraEditor and auraEditor.RelayoutFields then
-            auraEditor:RelayoutFields()
+        for _, moduleName in ipairs({ 'uf-aura-editor', 'np-aura-editor' }) do
+            local auraEditor = EXUI:GetModule(moduleName)
+            if auraEditor and auraEditor.RelayoutFields then
+                auraEditor:RelayoutFields()
+            end
         end
     end)
 end
@@ -499,15 +502,16 @@ local function ConfigureFrame(f, options)
         end)
     end)
 
-    local fromTargetBtn = EXFrames:GetFrame('button'):Create({
-        text = 'From Target',
-        size = { 0, BUTTON_HEIGHT },
-    }, f)
+    local fromTargetBtn = EXFrames:GetFrame('simple-button'):Create(f)
+    fromTargetBtn:SetOptionData({
+        label = 'From Target',
+        onClick = function()
+            showFromTargetPicker(f)
+        end,
+    })
     fromTargetBtn:SetPoint('TOPLEFT', inputArea, 'BOTTOMLEFT', 0, -SECTION_GAP)
     fromTargetBtn:SetPoint('TOPRIGHT', inputArea, 'BOTTOMRIGHT', 0, -SECTION_GAP)
-    fromTargetBtn:SetOnClick(function()
-        showFromTargetPicker(f)
-    end)
+    fromTargetBtn:SetHeight(BUTTON_HEIGHT)
     f.fromTargetBtn = fromTargetBtn
 
     local listContainer = CreateFrame('Frame', nil, f)

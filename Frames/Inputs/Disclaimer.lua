@@ -24,16 +24,6 @@ local function unpackColor(color, fallback)
     return 1, 1, 1, 1
 end
 
-local function applySliceTexture(tex, texturePath, r, g, b, a)
-    tex:SetTexture(texturePath)
-    tex:SetVertexColor(r, g, b, a)
-    if tex.SetTextureSliceMargins then
-        tex:SetTextureSliceMargins(8, 8, 8, 8)
-        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-    end
-    tex:SetAllPoints()
-end
-
 disclaimer.Init = function(self)
     self.pool = CreateFramePool('Frame', UIParent)
 end
@@ -41,11 +31,12 @@ end
 local function ConfigureFrame(f)
     f:SetHeight(MIN_HEIGHT)
 
-    local bg = f:CreateTexture(nil, 'BACKGROUND')
-    f.bg = bg
-
-    local border = f:CreateTexture(nil, 'OVERLAY', nil, 1)
-    f.border = border
+    EXFrames:ApplyPanelChrome(f, {
+        fillColor = EXFrames.Theme.backgroundLight,
+        borderColor = EXFrames.Theme.border,
+        borderShown = true,
+    })
+    f.bg = f.PanelFill
 
     local icon = f:CreateTexture(nil, 'ARTWORK')
     icon:SetSize(ICON_SIZE, ICON_SIZE)
@@ -66,16 +57,8 @@ local function ConfigureFrame(f)
         option = option or self.optionData or {}
         local theme = EXFrames.Theme
 
-        applySliceTexture(
-            self.bg,
-            EXFrames.assets.textures.ui.panelBg,
-            unpackColor(option.backgroundColor, theme.backgroundLight)
-        )
-        applySliceTexture(
-            self.border,
-            EXFrames.assets.textures.ui.panelBorder,
-            unpackColor(option.borderColor, theme.border)
-        )
+        self:SetPanelFillColor(unpackColor(option.backgroundColor, theme.backgroundLight))
+        self:SetPanelBorderColor(unpackColor(option.borderColor, theme.border))
 
         local textR, textG, textB, textA = unpackColor(option.textColor, theme.textMuted)
         self.text:SetTextColor(textR, textG, textB, textA)

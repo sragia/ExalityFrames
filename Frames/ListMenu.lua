@@ -25,26 +25,6 @@ local function unpackColor(color, fallback)
     return 1, 1, 1, 1
 end
 
-local function getBgTexture()
-    return EXFrames.assets.textures.ui.panelBg
-        or EXFrames.assets.textures.ui.inputBg
-        or EXFrames.assets.textures.solidWhite
-end
-
-local function getBorderTexture()
-    return EXFrames.assets.textures.ui.panelBorder or getBgTexture()
-end
-
-local function applySliceTexture(tex, texturePath, r, g, b, a)
-    tex:SetTexture(texturePath)
-    tex:SetVertexColor(r, g, b, a)
-    if tex.SetTextureSliceMargins then
-        tex:SetTextureSliceMargins(6, 6, 6, 6)
-        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    end
-    tex:SetAllPoints()
-end
-
 local function setRowIcon(texture, icon)
     if not texture then return end
     if not icon then
@@ -174,13 +154,12 @@ local function createPanel(frameName)
     panel:EnableMouse(true)
     panel:Hide()
 
-    local bg = panel:CreateTexture(nil, 'BACKGROUND')
-    applySliceTexture(bg, getBgTexture(), unpackColor(nil, theme.backgroundDeep))
-    panel.bg = bg
-
-    local border = panel:CreateTexture(nil, 'OVERLAY', nil, 1)
-    applySliceTexture(border, getBorderTexture(), unpackColor(nil, theme.border))
-    panel.border = border
+    EXFrames:ApplyPanelChrome(panel, {
+        fillColor = theme.backgroundDeep,
+        borderColor = theme.border,
+        borderShown = true,
+    })
+    panel.bg = panel.PanelFill
 
     panel.rows = {}
     panel.rowPool = CreateFramePool('Button', panel)
@@ -215,7 +194,9 @@ local function createPanel(frameName)
 
             if not row.bg then
                 local rowBg = row:CreateTexture(nil, 'BACKGROUND')
-                applySliceTexture(rowBg, getBgTexture(), unpackColor(nil, theme.backgroundLight))
+                rowBg:SetTexture(EXFrames.assets.textures.solidWhite)
+                rowBg:SetAllPoints()
+                rowBg:SetVertexColor(unpackColor(nil, theme.backgroundLight))
                 row.bg = rowBg
 
                 local icon = row:CreateTexture(nil, 'ARTWORK')

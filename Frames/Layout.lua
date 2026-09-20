@@ -37,8 +37,43 @@ local function ConfigureFrame(f)
         self.padLeft, self.padTop, self.padRight, self.padBottom = NormalizePadding(padding)
     end
 
+    local function layoutContainsAncestorChild(layoutFrame, child)
+        if not layoutFrame or not child or child == layoutFrame then
+            return child == layoutFrame
+        end
+        if child.GetBody then
+            local groupBody = child:GetBody()
+            local parent = layoutFrame
+            while parent do
+                if parent == child or parent == groupBody then
+                    return true
+                end
+                parent = parent:GetParent()
+            end
+        end
+        local parent = layoutFrame:GetParent()
+        while parent do
+            if parent == child then
+                return true
+            end
+            parent = parent:GetParent()
+        end
+        return false
+    end
+
+    local function safeSetPoint(frame, ...)
+        if not frame then
+            return false
+        end
+        local ok = pcall(frame.SetPoint, frame, ...)
+        return ok
+    end
+
     f.Add = function(self, child, spec)
         if not child then
+            return
+        end
+        if layoutContainsAncestorChild(self, child) then
             return
         end
         spec = spec or {}
@@ -48,7 +83,9 @@ local function ConfigureFrame(f)
             frame = child,
             flex = spec.flex,
             width = spec.width,
+            widthPercent = spec.widthPercent,
             height = spec.height,
+            align = spec.align,
         })
     end
 
@@ -57,6 +94,12 @@ local function ConfigureFrame(f)
     end
 
     f.Layout = function(self)
+        for i = #self.items, 1, -1 do
+            if layoutContainsAncestorChild(self, self.items[i].frame) then
+                table.remove(self.items, i)
+            end
+        end
+
         local width = math.max(1, self:GetWidth())
         local innerWidth = math.max(1, width - self.padLeft - self.padRight)
         local gap = self.gap or 0
@@ -72,6 +115,8 @@ local function ConfigureFrame(f)
                     visible = visible + 1
                     if item.width then
                         fixed = fixed + item.width
+                    elseif item.widthPercent then
+                        fixed = fixed + innerWidth * item.widthPercent / 100
                     else
                         flexTotal = flexTotal + (item.flex or 1)
                     end
@@ -81,15 +126,16 @@ local function ConfigureFrame(f)
             local remaining = math.max(0, innerWidth - fixed - gapTotal)
             local x = self.padLeft
             local rowHeight = 0
+            local placements = {}
             for _, item in ipairs(self.items) do
-                if item.frame:IsShown() then
+                if item.frame:IsShown() and not layoutContainsAncestorChild(self, item.frame) then
                     local childWidth = item.width
+                    if not childWidth and item.widthPercent then
+                        childWidth = innerWidth * item.widthPercent / 100
+                    end
                     if not childWidth then
                         childWidth = flexTotal > 0 and (remaining * ((item.flex or 1) / flexTotal)) or remaining
                     end
-                    local childHeight = item.height or item.frame:GetHeight() or 0
-                    item.frame:ClearAllPoints()
-                    item.frame:SetPoint('TOPLEFT', self, 'TOPLEFT', x, y)
                     item.frame:SetWidth(childWidth)
                     if item.frame.SetFrameWidth then
                         item.frame:SetFrameWidth(childWidth)
@@ -97,22 +143,46 @@ local function ConfigureFrame(f)
                     if item.height then
                         item.frame:SetHeight(item.height)
                     end
+                    local childHeight = item.height or item.frame:GetHeight() or 0
                     if item.frame.Layout then
                         item.frame:Layout()
                         childHeight = item.frame:GetHeight()
                     end
                     rowHeight = math.max(rowHeight, childHeight)
+                    table.insert(placements, {
+                        item = item,
+                        x = x,
+                        height = childHeight,
+                    })
                     x = x + childWidth + gap
+                end
+            end
+            local rowBottom = y - rowHeight
+            for _, placement in ipairs(placements) do
+                local item = placement.item
+                if not layoutContainsAncestorChild(self, item.frame) then
+                    local childHeight = placement.height
+                    local align = string.lower(item.align or 'top')
+                    item.frame:ClearAllPoints()
+                    if align == 'top' then
+                        safeSetPoint(item.frame, 'TOPLEFT', self, 'TOPLEFT', placement.x, y)
+                    elseif align == 'center' then
+                        safeSetPoint(item.frame, 'TOPLEFT', self, 'TOPLEFT', placement.x, y - (rowHeight - childHeight) / 2)
+                    else
+                        safeSetPoint(item.frame, 'BOTTOMLEFT', self, 'TOPLEFT', placement.x, rowBottom)
+                    end
                 end
             end
             totalHeight = totalHeight + rowHeight
         else
             for i, item in ipairs(self.items) do
-                if item.frame:IsShown() then
-                    local childWidth = item.width or innerWidth
+                if item.frame:IsShown() and not layoutContainsAncestorChild(self, item.frame) then
+                    local childWidth = item.width
+                    if not childWidth and item.widthPercent then
+                        childWidth = innerWidth * item.widthPercent / 100
+                    end
+                    childWidth = childWidth or innerWidth
                     local childHeight = item.height or item.frame:GetHeight() or 0
-                    item.frame:ClearAllPoints()
-                    item.frame:SetPoint('TOPLEFT', self, 'TOPLEFT', self.padLeft, y)
                     item.frame:SetWidth(childWidth)
                     if item.frame.SetFrameWidth then
                         item.frame:SetFrameWidth(childWidth)
@@ -123,6 +193,10 @@ local function ConfigureFrame(f)
                     if item.frame.Layout then
                         item.frame:Layout()
                         childHeight = item.frame:GetHeight()
+                    end
+                    if not layoutContainsAncestorChild(self, item.frame) then
+                        item.frame:ClearAllPoints()
+                        safeSetPoint(item.frame, 'TOPLEFT', self, 'TOPLEFT', self.padLeft, y)
                     end
                     y = y - childHeight - gap
                     totalHeight = totalHeight + childHeight
@@ -155,15 +229,25 @@ local function ConfigureFrame(f)
 
     f.Destroy = function(self)
         for _, item in ipairs(self.items) do
-            if item.frame and item.frame.ClearItems and item.frame.Destroy then
-                item.frame:Destroy()
+            local frame = item.frame
+            if frame then
+                if frame.ClearItems and frame.Destroy then
+                    frame:Destroy()
+                else
+                    frame:SetParent(nil)
+                end
             end
         end
         self:ClearItems()
         self.direction = 'stack'
         self.gap = 10
         self.padLeft, self.padTop, self.padRight, self.padBottom = 0, 0, 0, 0
-        layout.pool:Release(self)
+        if self._layoutDedicated then
+            self:SetParent(nil)
+            self:Hide()
+        else
+            layout.pool:Release(self)
+        end
     end
 
     f.configured = true
@@ -172,15 +256,44 @@ end
 layout.Create = function(self, parent, options)
     parent, options = EXFrames.FrameBase.ResolveCreateArgs(parent, options)
     options = options or {}
-    local f = self.pool:Acquire()
-    if not f.configured then
-        ConfigureFrame(f)
-    else
-        f:ClearItems()
+    for _ = 1, 8 do
+        local f = self.pool:Acquire()
+        local existingParent = f:GetParent()
+        if existingParent and parent and existingParent ~= parent then
+            if f.ClearItems then
+                f:ClearItems()
+            end
+            f:SetParent(nil)
+            self.pool:Release(f)
+        else
+            if not f.configured then
+                ConfigureFrame(f)
+            else
+                f:ClearItems()
+            end
+            if parent then
+                f:SetParent(parent)
+            elseif existingParent then
+                f:SetParent(nil)
+            end
+            f:Configure(options)
+            f:Show()
+            return f
+        end
     end
-    if parent then
-        f:SetParent(parent)
-    end
+    local f = CreateFrame('Frame', parent or UIParent)
+    ConfigureFrame(f)
+    f:Configure(options)
+    f:Show()
+    return f
+end
+
+layout.CreateDedicated = function(self, parent, options)
+    parent, options = EXFrames.FrameBase.ResolveCreateArgs(parent, options)
+    options = options or {}
+    local f = CreateFrame('Frame', parent or UIParent)
+    ConfigureFrame(f)
+    f._layoutDedicated = true
     f:Configure(options)
     f:Show()
     return f

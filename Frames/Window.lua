@@ -2,7 +2,10 @@ local addonName, ns = ...
 ---@class ExalityFrames
 local EXFrames = ns.EXFrames
 
----@class WindowOptions : {size?: table<number>, title?: string, hideVersion?: boolean}
+---@class WindowDiscordLink : {label?: string, url: string, onClick?: fun(url: string, link: WindowDiscordLink)}
+---@class LegacyCloseChromeOptions : { width?: number, height?: number, inset?: table<number>, buttonBg?: string, closeIcon?: string, iconSize?: number, normalColor?: table<number>, hoverColor?: table<number> }
+---@class LegacyChromeOptions : { hideHeaderBar?: boolean, close?: LegacyCloseChromeOptions }
+---@class WindowOptions : {size?: table<number>, title?: string, hideVersion?: boolean, showHeaderVersion?: boolean, versionBottom?: boolean, versionBottomOffset?: number, onVersionClick?: function, discordLink?: WindowDiscordLink, legacyChrome?: boolean|LegacyChromeOptions}
 
 --- @class ExalityFramesWindowFrame
 local window = EXFrames:GetFrame('window-frame')
@@ -103,27 +106,16 @@ local configure = function(frame)
     frame.headerHeight = 40
     frame.headerInset = 5
     frame.headerButtonGap = 5
+    frame.headerContentGap = 5
     frame.headerButtons = {}
 
     if (not frame.Texture) then
         local th = EXFrames.Theme
-
-        local bg = frame:CreateTexture(nil, 'BACKGROUND')
-        frame.Texture = bg
-        bg:SetTexture(EXFrames.assets.textures.ui.panelBg)
-        bg:SetVertexColor(unpack(th.backgroundDeep))
-        bg:SetTextureSliceMargins(8, 8, 8, 8)
-        bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-        bg:SetAllPoints()
-
-        local borderOverlay = frame:CreateTexture(nil, 'OVERLAY', nil, 7)
-        borderOverlay:SetTexture(EXFrames.assets.textures.ui.panelBorder)
-        borderOverlay:SetVertexColor(unpack(th.border))
-        borderOverlay:SetTextureSliceMargins(8, 8, 8, 8)
-        borderOverlay:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-        borderOverlay:SetAllPoints()
-        borderOverlay:SetAlpha(0)
-        frame.borderOverlay = borderOverlay
+        EXFrames:ApplyPanelChrome(frame, {
+            fillColor = th.backgroundDeep,
+            borderColor = th.border,
+            borderShown = false,
+        })
     end
 
     if (not frame.header) then
@@ -299,7 +291,8 @@ local configure = function(frame)
         if self.container then
             self.container:ClearAllPoints()
             if self.showHeader ~= false then
-                self.container:SetPoint('TOPLEFT', inset, -(inset + headerH))
+                local contentGap = self.headerContentGap or 0
+                self.container:SetPoint('TOPLEFT', inset, -(inset + headerH + contentGap))
             else
                 self.container:SetPoint('TOPLEFT', inset, -inset)
             end
@@ -339,13 +332,74 @@ local configure = function(frame)
         self.title:SetText(text or '')
     end
 
+    frame.ApplyDefaultCloseChrome = function(self)
+        local th = EXFrames.Theme
+        if not self.close or not self.close.bg then
+            return
+        end
+        local close = self.close
+        local bg = close.bg
+        bg:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+        bg:SetTextureSliceMargins(16, 16, 16, 16)
+        bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        bg:SetVertexColor(unpack(th.faded))
+        close.icon:SetTexture(EXFrames.assets.textures.icon.close)
+        close.icon:SetVertexColor(1, 1, 1, 1)
+        close.icon:SetSize(16, 16)
+        close:SetScript('OnEnter', function(_)
+            bg:SetVertexColor(unpack(th.dangerHover))
+        end)
+        close:SetScript('OnLeave', function(_)
+            bg:SetVertexColor(unpack(th.faded))
+        end)
+    end
+
+    frame.ApplyLegacyCloseChrome = function(self)
+        local spec = self.legacyCloseSpec
+        if not spec or not self.close or not self.close.bg then
+            return
+        end
+        local close = self.close
+        local bg = close.bg
+        bg:SetTexture(spec.buttonBg or EXFrames.assets.textures.ui.buttonBg)
+        bg:SetTextureSliceMargins(20, 20, 20, 20)
+        bg:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+        if spec.normalColor then
+            bg:SetVertexColor(unpack(spec.normalColor))
+        end
+        close.icon:SetTexture(spec.closeIcon or EXFrames.assets.textures.icon.close)
+        close.icon:SetVertexColor(1, 1, 1, 1)
+        local iconSize = spec.iconSize or 12
+        close.icon:SetSize(iconSize, iconSize)
+        local hover = spec.hoverColor
+        local normal = spec.normalColor
+        close:SetScript('OnEnter', function(_)
+            if hover then
+                bg:SetVertexColor(unpack(hover))
+            end
+        end)
+        close:SetScript('OnLeave', function(_)
+            if normal then
+                bg:SetVertexColor(unpack(normal))
+            end
+        end)
+    end
+
     frame.LayoutHeaderButtons = function(self)
         local size = self.headerHeight or 40
         local gap = self.headerButtonGap or 5
         if self.close then
-            self.close:SetSize(size, size)
-            self.close:ClearAllPoints()
-            self.close:SetPoint('RIGHT', self.header, 'RIGHT', 0, 0)
+            if self.legacyCloseLayout then
+                local spec = self.legacyCloseSpec or {}
+                local inset = spec.inset or { 8, 6 }
+                self.close:SetSize(spec.width or 28, spec.height or 22)
+                self.close:ClearAllPoints()
+                self.close:SetPoint('TOPRIGHT', self, 'TOPRIGHT', -inset[1], -inset[2])
+            else
+                self.close:SetSize(size, size)
+                self.close:ClearAllPoints()
+                self.close:SetPoint('RIGHT', self.header, 'RIGHT', 0, 0)
+            end
         end
         local prev = self.close
         for i = #self.headerButtons, 1, -1 do
@@ -375,11 +429,45 @@ local configure = function(frame)
             onClick = spec.onClick,
             size = spec.size or { size, size },
             color = spec.color or EXFrames.Theme.faded,
+            hoverColor = spec.hoverColor,
             icon = spec.icon,
         })
         table.insert(self.headerButtons, btn)
         self:LayoutHeaderButtons()
         return btn
+    end
+
+    frame.ApplyLegacyChrome = function(self, opts)
+        opts = opts or {}
+        local th = EXFrames.Theme
+        if self.SetPanelFillColor then
+            self:SetPanelFillColor(unpack(th.backgroundDeep))
+        elseif self.Texture then
+            self.Texture:SetVertexColor(unpack(th.backgroundDeep))
+        end
+        if self.headerTex then
+            if opts.hideHeaderBar then
+                self.headerTex:Hide()
+            else
+                self.headerTex:SetTexture(EXFrames.assets.textures.ui.buttonBg)
+                self.headerTex:SetVertexColor(unpack(th.backgroundDeep))
+                self.headerTex:SetTextureSliceMargins(16, 16, 16, 16)
+                self.headerTex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+                self.headerTex:Show()
+            end
+        end
+        if opts.close then
+            self.legacyCloseLayout = true
+            self.legacyCloseSpec = opts.close
+            self:ApplyLegacyCloseChrome()
+        else
+            self.legacyCloseLayout = false
+            self.legacyCloseSpec = nil
+            if self.close and self.close.icon then
+                self.close.icon:SetTexture(EXFrames.assets.textures.icon.close)
+            end
+        end
+        self:ApplyChromeLayout()
     end
 
     frame.SetHeaderTexture = function(self, path)
@@ -417,6 +505,153 @@ local configure = function(frame)
         frame.container = container
     end
 
+    if not frame.versionFooter then
+        local th = EXFrames.Theme
+        local FOOTER_HEIGHT = 14
+        local FOOTER_ITEM_GAP = 5
+
+        local footer = CreateFrame('Frame', nil, frame)
+        footer:Hide()
+        footer:SetFrameLevel(frame:GetFrameLevel() + 2)
+
+        local function BindFooterHover(button)
+            button:SetScript('OnEnter', function(self)
+                self.text:SetTextColor(unpack(th.accent))
+            end)
+            button:SetScript('OnLeave', function(self)
+                self.text:SetTextColor(unpack(th.white))
+            end)
+        end
+
+        local versionBtn = CreateFrame('Button', nil, footer)
+        local versionText = versionBtn:CreateFontString(nil, 'OVERLAY')
+        versionText:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
+        versionText:SetTextColor(unpack(th.white))
+        versionText:SetJustifyH('LEFT')
+        versionText:SetText(addonVersion)
+        versionText:SetPoint('LEFT')
+        versionBtn.text = versionText
+        BindFooterHover(versionBtn)
+
+        local separator = footer:CreateFontString(nil, 'OVERLAY')
+        separator:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
+        separator:SetTextColor(unpack(th.textMuted))
+        separator:SetText('/')
+        separator:Hide()
+
+        local discordBtn = CreateFrame('Button', nil, footer)
+        discordBtn:Hide()
+        local discordText = discordBtn:CreateFontString(nil, 'OVERLAY')
+        discordText:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
+        discordText:SetTextColor(unpack(th.white))
+        discordText:SetJustifyH('LEFT')
+        discordText:SetPoint('LEFT')
+        discordBtn.text = discordText
+        BindFooterHover(discordBtn)
+
+        footer.versionBtn = versionBtn
+        footer.separator = separator
+        footer.discordBtn = discordBtn
+
+        frame.versionFooter = footer
+        frame.versionBottom = versionBtn
+        frame.versionBottomOffset = -4
+        frame.discordLink = nil
+
+        frame.UpdateVersionFooterLayout = function(self)
+            local bar = self.versionFooter
+            if not bar or not bar:IsShown() then
+                return
+            end
+
+            local x = 0
+            local versionButton = bar.versionBtn
+            if versionButton:IsShown() then
+                local width = math.max(1, versionButton.text:GetStringWidth())
+                versionButton:SetSize(width, FOOTER_HEIGHT)
+                versionButton:ClearAllPoints()
+                versionButton:SetPoint('TOPLEFT', bar, 'TOPLEFT', x, 0)
+                x = x + width
+            end
+
+            if bar.separator:IsShown() then
+                bar.separator:ClearAllPoints()
+                bar.separator:SetPoint('LEFT', bar, 'LEFT', x + FOOTER_ITEM_GAP, 0)
+                x = x + FOOTER_ITEM_GAP + bar.separator:GetStringWidth()
+            end
+
+            if bar.discordBtn:IsShown() then
+                local width = math.max(1, bar.discordBtn.text:GetStringWidth())
+                bar.discordBtn:SetSize(width, FOOTER_HEIGHT)
+                bar.discordBtn:ClearAllPoints()
+                bar.discordBtn:SetPoint('TOPLEFT', bar, 'TOPLEFT', x + FOOTER_ITEM_GAP, 0)
+                x = x + FOOTER_ITEM_GAP + width
+            end
+
+            bar:SetSize(math.max(1, x), FOOTER_HEIGHT)
+            bar:ClearAllPoints()
+            bar:SetPoint('TOPLEFT', self, 'BOTTOMLEFT', 0, self.versionBottomOffset or -4)
+        end
+
+        frame.UpdateBottomVersionLayout = frame.UpdateVersionFooterLayout
+
+        frame.SetBottomVersionShown = function(self, shown)
+            if not self.versionFooter then
+                return
+            end
+            if shown then
+                self.versionFooter:Show()
+                self.versionFooter.versionBtn:Show()
+                self:UpdateVersionFooterLayout()
+            else
+                self.versionFooter:Hide()
+            end
+        end
+
+        frame.SetBottomVersionOffset = function(self, offsetY)
+            self.versionBottomOffset = offsetY
+            self:UpdateVersionFooterLayout()
+        end
+
+        frame.SetVersionClickHandler = function(self, onClick)
+            if not self.versionFooter then
+                return
+            end
+            local versionButton = self.versionFooter.versionBtn
+            if onClick then
+                versionButton:SetScript('OnClick', function()
+                    onClick(self)
+                end)
+            else
+                versionButton:SetScript('OnClick', nil)
+            end
+        end
+
+        frame.SetDiscordLink = function(self, link)
+            self.discordLink = link
+            if not self.versionFooter then
+                return
+            end
+            local bar = self.versionFooter
+            local discordButton = bar.discordBtn
+            if link and link.url and link.url ~= '' then
+                discordButton.text:SetText(link.label or 'Discord')
+                discordButton:Show()
+                bar.separator:Show()
+                discordButton:SetScript('OnClick', function()
+                    if link.onClick then
+                        link.onClick(link.url, link)
+                    end
+                end)
+            else
+                discordButton:Hide()
+                bar.separator:Hide()
+                discordButton:SetScript('OnClick', nil)
+            end
+            self:UpdateVersionFooterLayout()
+        end
+    end
+
     frame:ApplyChromeLayout()
 
     frame.DisableResize = function(self)
@@ -434,7 +669,7 @@ local configure = function(frame)
         self:UpdateTitleAnchor()
     end
 
-    ---@param options {staticAnchor?: table, disableResize?: boolean, disableLogoAndVersion?: boolean, titleSize?: number, headerTexture?: string, backgroundTexture?: string, closeIcon?: string, showHeader?: boolean, headerHeight?: number, headerInset?: number, headerButtonGap?: number}
+    ---@param options {staticAnchor?: table, disableResize?: boolean, disableLogoAndVersion?: boolean, titleSize?: number, headerTexture?: string, backgroundTexture?: string, closeIcon?: string, showHeader?: boolean, headerHeight?: number, headerInset?: number, headerButtonGap?: number, versionBottom?: boolean, versionBottomOffset?: number, onVersionClick?: function, discordLink?: WindowDiscordLink}
     frame.Configure = function(self, options)
         if (options) then
             if (options.disableResize) then
@@ -470,6 +705,18 @@ local configure = function(frame)
             if (options.closeIcon) then
                 self:SetCloseIcon(options.closeIcon)
             end
+            if (options.versionBottom ~= nil) then
+                self:SetBottomVersionShown(options.versionBottom)
+            end
+            if (options.versionBottomOffset ~= nil) then
+                self:SetBottomVersionOffset(options.versionBottomOffset)
+            end
+            if (options.onVersionClick ~= nil) then
+                self:SetVersionClickHandler(options.onVersionClick)
+            end
+            if (options.discordLink ~= nil) then
+                self:SetDiscordLink(options.discordLink)
+            end
             self:ApplyChromeLayout()
         end
     end
@@ -496,17 +743,50 @@ window.Create = function(self, options)
         f:SetTitle(options.title)
     end
 
-    if (options and options.hideVersion) then
-        f:HideVersion(options.hideVersion)
+    f:HideVersion(true)
+    if f.SetBottomVersionShown then
+        f:SetBottomVersionShown(false)
+    end
+    if f.SetVersionClickHandler then
+        f:SetVersionClickHandler(nil)
+    end
+    if f.SetDiscordLink then
+        f:SetDiscordLink(nil)
+    end
+
+    if (options and options.showHeaderVersion) then
+        f:HideVersion(false)
+    end
+
+    if (options and options.versionBottom) then
+        f:HideVersion(true)
+        f:SetBottomVersionShown(true)
+        if (options.versionBottomOffset ~= nil) then
+            f:SetBottomVersionOffset(options.versionBottomOffset)
+        end
+        if (options.onVersionClick) then
+            f:SetVersionClickHandler(options.onVersionClick)
+        end
+        if (options.discordLink) then
+            f:SetDiscordLink(options.discordLink)
+        end
     end
 
     if (options and options.onClose) then
         f.onClose = options.onClose
     end
 
-    f:SetBackgroundTexture(DEFAULT_CHROME.backgroundTexture)
-    f:SetHeaderTexture(DEFAULT_CHROME.headerTexture)
-    f:SetCloseIcon(DEFAULT_CHROME.closeIcon)
+    if options and options.legacyChrome then
+        local legacyOpts = options.legacyChrome == true and {} or options.legacyChrome
+        f:ApplyLegacyChrome(legacyOpts)
+    else
+        f.legacyCloseLayout = false
+        f.legacyCloseSpec = nil
+        f:SetBackgroundTexture(DEFAULT_CHROME.backgroundTexture)
+        f:SetHeaderTexture(DEFAULT_CHROME.headerTexture)
+        f:SetCloseIcon(DEFAULT_CHROME.closeIcon)
+        f:ApplyDefaultCloseChrome()
+    end
 
     if options then
         f:Configure(options)

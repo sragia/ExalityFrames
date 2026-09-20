@@ -303,9 +303,8 @@ local configure = function(f)
     f.scrollFrame = rightScroll
     f.container = rightScroll.child
 
-    local extraButton = EXFrames:GetFrame('button'):Create()
+    local extraButton = EXFrames:GetFrame('simple-button'):Create(leftPanel)
     extraButton:SetHeight(EXFrames:ScalePixel(30, f))
-    extraButton:SetParent(leftPanel)
     extraButton:Hide()
     f.extraButton = extraButton
 
@@ -551,17 +550,34 @@ local configure = function(f)
         end
     end
 
+    f.SetContentActionButton = function(self, buttonOptions)
+        if not buttonOptions then
+            if self.contentActionButton then
+                self.contentActionButton:Hide()
+            end
+            return
+        end
+        if not self.contentActionButton then
+            local btn = EXFrames:GetFrame('simple-button'):Create(self.container)
+            btn:SetHeight(EXFrames:ScalePixel(30, self))
+            btn:SetFrameWidth(EXFrames:ScalePixel(140, self))
+            btn:SetPoint('TOPRIGHT', self.container, 'TOPRIGHT', -EXFrames:ScalePixel(5, self.container), -EXFrames:ScalePixel(5, self.container))
+            self.contentActionButton = btn
+        end
+        self.contentActionButton:Show()
+        self.contentActionButton:SetOptionData({
+            label = buttonOptions.text or buttonOptions.label,
+            onClick = buttonOptions.onClick,
+        })
+    end
+
     f.AddExtraButton = function(self, buttonOptions)
         self.extraButton:Show()
-        if buttonOptions.color then
-            self.extraButton:SetColor(unpack(buttonOptions.color))
-        end
-        if buttonOptions.text then
-            self.extraButton:SetText(buttonOptions.text)
-        end
-        if buttonOptions.onClick then
-            self.extraButton:SetOnClick(buttonOptions.onClick)
-        end
+        self.extraButton:SetOptionData({
+            label = buttonOptions.text or buttonOptions.label,
+            onClick = buttonOptions.onClick,
+            icon = buttonOptions.icon,
+        })
         self:ApplyPanelLayout()
     end
 
@@ -573,6 +589,9 @@ local configure = function(f)
     f.Destroy = function(self)
         listMenu:Hide()
         self.extraButton:Hide()
+        if self.contentActionButton then
+            self.contentActionButton:Hide()
+        end
         self.activeID = nil
         if self.scrollFrame then
             self.scrollFrame:Reset()

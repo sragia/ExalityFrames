@@ -153,7 +153,7 @@ local function UpdateContentInsets(f)
     local maxScroll = GetMaxScroll(f)
 
     f.content:ClearAllPoints()
-    if maxScroll > 0 then
+    if maxScroll > 0 and not f.scrollbarSuppressed then
         f.scrollBar:Show()
         f.content:SetPoint('TOPLEFT', 0, 0)
         f.content:SetPoint('BOTTOMRIGHT', -GetScrollbarSpace(f), 0)
@@ -172,6 +172,7 @@ local function ConfigureFrame(f)
 
     f.scrollOffset = 0
     f.targetScroll = 0
+    f.scrollbarSuppressed = false
     f.scrollStep = SCROLL_STEP
     f.scrollbarWidth = EXFrames:ScalePixel(4, f)
     f.scrollbarPadding = EXFrames:ScalePixel(2, f)
@@ -284,6 +285,19 @@ local function ConfigureFrame(f)
         UpdateThumbPosition(self)
     end
 
+    f.SetScrollbarSuppressed = function(self, suppressed)
+        if self.scrollbarSuppressed == suppressed then
+            return
+        end
+        self.scrollbarSuppressed = suppressed
+        if suppressed then
+            self.targetScroll = 0
+            self.scrollOffset = 0
+            ApplyScroll(self, 0)
+        end
+        self:UpdateScrollbar()
+    end
+
     f.UpdateScrollChild = function(self, width, height)
         self.preferredChildWidth = width
 
@@ -329,6 +343,7 @@ local function ConfigureFrame(f)
         self.smoothUpdateActive = false
         self.scrollOffset = 0
         self.targetScroll = 0
+        self.scrollbarSuppressed = false
         self.preferredChildWidth = nil
         if self.child then
             self.child:SetSize(1, 1)

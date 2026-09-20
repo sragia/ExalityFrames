@@ -87,12 +87,28 @@ local function CreateTabButton(parent)
     return button
 end
 
+local CONTENT_SIDE_INSET = 5
+local CONTENT_TOP_EXTRA = 3
+
+local function UpdateContentInsets(frame)
+    local panel = frame.panel
+    if not panel or not frame.contentHost then
+        return
+    end
+    local side = EXFrames:ScalePixel(CONTENT_SIDE_INSET, panel)
+    local top = EXFrames:ScalePixel(CONTENT_SIDE_INSET + CONTENT_TOP_EXTRA, panel)
+    local bottom = EXFrames:ScalePixel(CONTENT_SIDE_INSET, panel)
+    frame.contentHost:ClearAllPoints()
+    frame.contentHost:SetPoint('TOPLEFT', panel, 'TOPLEFT', side, -top)
+    frame.contentHost:SetPoint('BOTTOMRIGHT', panel, 'BOTTOMRIGHT', -side, bottom)
+end
+
 local function SetupScrollable(frame)
+    UpdateContentInsets(frame)
     if not frame.scrollFrame then
         local scroll = smoothScrollFrame:Create()
-        scroll:SetParent(frame.panel)
-        scroll:SetPoint('TOPLEFT', 5, -5)
-        scroll:SetPoint('BOTTOMRIGHT', -5, 5)
+        scroll:SetParent(frame.contentHost)
+        scroll:SetAllPoints()
         frame.scrollFrame = scroll
     end
 
@@ -102,8 +118,9 @@ local function SetupScrollable(frame)
     frame.scrollable = true
 
     frame.UpdateScroll = function(self)
-        local width = math.max(1, self.panel:GetWidth() - 15)
-        local viewportHeight = math.max(1, self.panel:GetHeight() - 15)
+        UpdateContentInsets(self)
+        local width = math.max(1, self.contentHost:GetWidth())
+        local viewportHeight = math.max(1, self.contentHost:GetHeight())
         local contentHeight = self.container:GetHeight()
         if contentHeight > 0 then
             self.scrollFrame:UpdateScrollChild(width, math.max(contentHeight, viewportHeight))
@@ -118,10 +135,11 @@ local function ClearScrollable(frame)
         frame.scrollFrame:Destroy()
         frame.scrollFrame = nil
     end
-    frame.container = frame.panel
+    frame.container = frame.contentHost
     frame.container.exuiAutoSizeHeight = nil
     frame.scrollable = false
     frame.UpdateScroll = nil
+    UpdateContentInsets(frame)
 end
 
 local configure = function(frame)
@@ -140,7 +158,15 @@ local configure = function(frame)
     panel:SetPoint('TOPLEFT', tabBar, 'BOTTOMLEFT')
     panel:SetPoint('BOTTOMRIGHT')
     frame.panel = panel
-    frame.container = panel
+
+    local contentHost = CreateFrame('Frame', nil, panel)
+    contentHost:SetFrameLevel(panel:GetFrameLevel() + 1)
+    frame.contentHost = contentHost
+    frame.container = contentHost
+    UpdateContentInsets(frame)
+    panel:HookScript('OnSizeChanged', function()
+        UpdateContentInsets(frame)
+    end)
 
     frame.onTabClick = function(self, id)
         frame.activeTabID = id
@@ -166,7 +192,7 @@ local configure = function(frame)
             button:SetText(tab.label)
             button.onClick = self.onTabClick
             if (not prev) then
-                button:SetPoint('BOTTOMLEFT', self.tabBar, 'BOTTOMLEFT', 20, 1)
+                button:SetPoint('BOTTOMLEFT', self.tabBar, 'BOTTOMLEFT', 5, 1)
             else
                 button:SetPoint('BOTTOMLEFT', prev, 'BOTTOMRIGHT', 3, 0)
             end

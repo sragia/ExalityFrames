@@ -10,6 +10,7 @@
   <Script file="Frames/Inputs/Range.lua" />
   <Script file="Frames/Inputs/Toggle.lua" />
   <Script file="Frames/Inputs/Button.lua" />
+  <Script file="Frames/Inputs/SimpleButton.lua" />
   <Script file="Frames/Inputs/ToggleButton.lua" />
   <Script file="Frames/Inputs/LuaEditor.lua" />
   <Script file="Frames/Inputs/Keybind.lua" />
@@ -23,6 +24,7 @@
   <Script file="Frames/Inputs/AnchorPoint.lua" />
   <Script file="Frames/OptionFrames/ModuleItem.lua" />
   <Script file="Frames/OptionFrames/MenuItem.lua" />
+  <Script file="Frames/OptionFrames/OptionGroup.lua" />
   <Script file="Frames/Dialog.lua" />
   <Script file="Frames/ListMenu.lua" />
   <Script file="Frames/SplitOptions.lua" />

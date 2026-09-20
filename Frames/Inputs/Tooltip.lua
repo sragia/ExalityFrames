@@ -12,6 +12,19 @@ tooltip.Init = function(self)
     self.pool = CreateFramePool('Frame', UIParent)
 end
 
+local TOOLTIP_FRAME_LEVEL = 1000
+
+local function PositionTooltip(tooltip, anchor)
+    if not anchor or not anchor.IsShown then
+        return
+    end
+    tooltip:SetParent(UIParent)
+    tooltip:SetFrameStrata('TOOLTIP')
+    tooltip:SetFrameLevel(TOOLTIP_FRAME_LEVEL)
+    tooltip:ClearAllPoints()
+    tooltip:SetPoint('BOTTOM', anchor, 'TOP', 0, 15)
+end
+
 ---@param f Frame
 local function ConfigureFrame(f)
     EXFrames.utils.addObserver(f)
@@ -50,6 +63,9 @@ local function ConfigureFrame(f)
     hideAG:SetScript('OnFinished', function() f:Hide() end)
 
     f.ShowTooltip = function(self)
+        if self.anchor then
+            PositionTooltip(self, self.anchor)
+        end
         self:Show()
         showAG:Play()
     end
@@ -73,13 +89,15 @@ tooltip.Get = function(self, options, parent)
         ConfigureFrame(tooltip)
     end
 
-    if (parent) then
-        tooltip:SetPoint('BOTTOM', parent, 'TOP', 0, 15)
+    tooltip.anchor = parent
+    if parent then
+        PositionTooltip(tooltip, parent)
     end
 
     tooltip:SetText(options.text)
 
     tooltip.Destroy = function(self)
+        self.anchor = nil
         tooltip.pool:Release(self)
     end
 
@@ -87,4 +105,4 @@ tooltip.Get = function(self, options, parent)
 end
 
 tooltip.Create = tooltip.Get
-EXFrames.FrameBase.StandardizeCreate(tooltip)
+EXFrames.FrameBase.StandardizeCreate(tooltip, 'no-parent')

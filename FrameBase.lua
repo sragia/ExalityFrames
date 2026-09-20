@@ -115,7 +115,7 @@ function FrameBase.StandardizeCreate(proto, argStyle)
         if not f then
             return f
         end
-        if resolvedParent and f.SetParent then
+        if resolvedParent and f.SetParent and argStyle ~= 'no-parent' then
             f:SetParent(resolvedParent)
         end
         if not f.Configure then
