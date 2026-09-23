@@ -2,8 +2,8 @@ local _, ns = ...
 ---@class ExalityFrames
 local EXFrames = ns.EXFrames
 
----@class ExalityFramesButton
-local button = EXFrames:GetFrame('button')
+---@class ExalityFramesSimpleButton
+local simpleButton = EXFrames:GetFrame('simple-button')
 
 ---@class ExalityFramesEditBoxInput
 local editBox = EXFrames:GetFrame('edit-box-input')
@@ -37,19 +37,11 @@ local function ConfigureFrame(f)
   EXFrames.utils.animation.diveIn(f, 0.2, 0, 20, 'IN', f.fadeIn)
   EXFrames.utils.animation.diveIn(f, 0.2, 0, -20, 'OUT', f.fadeOut)
 
-  local background = f:CreateTexture(nil, 'BACKGROUND')
-  background:SetTexture(EXFrames.assets.textures.ui.panelBg)
-  background:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
-  background:SetTextureSliceMargins(8, 8, 8, 8)
-  background:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-  background:SetAllPoints()
-
-  local border = f:CreateTexture(nil, 'OVERLAY', nil, 1)
-  border:SetTexture(EXFrames.assets.textures.ui.panelBorder)
-  border:SetVertexColor(unpack(EXFrames.Theme.border))
-  border:SetTextureSliceMargins(8, 8, 8, 8)
-  border:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-  border:SetAllPoints()
+  EXFrames:ApplyPanelChrome(f, {
+    fillColor = EXFrames.Theme.backgroundDeep,
+    borderColor = EXFrames.Theme.border,
+    borderShown = true,
+  })
 
   local editBox = editBox:Create({}, f)
   f.editBox = editBox
@@ -57,29 +49,31 @@ local function ConfigureFrame(f)
   editBox:SetPoint('TOPLEFT', 5, -5)
   editBox:SetPoint('TOPRIGHT', -5, -5)
 
-  local cancelButton = button:Create({
-    color = { 128 / 255, 17 / 255, 0, 1 }
-  }, f)
-  cancelButton:SetText('Cancel')
-  cancelButton:SetOnClick(function()
-    f:HideDialog()
-  end)
+  local cancelButton = simpleButton:Create(f)
+  cancelButton:SetOptionData({
+    label = 'Cancel',
+    color = { 128 / 255, 17 / 255, 0, 1 },
+    onClick = function()
+      f:HideDialog()
+    end,
+  })
   cancelButton:SetPoint('BOTTOMLEFT', f, 'BOTTOM', 5, 5)
   cancelButton:SetPoint('BOTTOMRIGHT', -5, 5)
 
   f.cancelButton = cancelButton
 
-  local successButton = button:Create({
-    color = { 44 / 255, 145 / 255, 0, 1 }
-  }, f)
-  successButton:SetText('OK')
-  successButton:SetOnClick(function()
-    local value = f.editBox:GetEditorValue()
-    if (f.onSuccess) then
-      f.onSuccess(value)
-    end
-    f:HideDialog()
-  end)
+  local successButton = simpleButton:Create(f)
+  successButton:SetOptionData({
+    label = 'OK',
+    color = { 44 / 255, 145 / 255, 0, 1 },
+    onClick = function()
+      local value = f.editBox:GetEditorValue()
+      if (f.onSuccess) then
+        f.onSuccess(value)
+      end
+      f:HideDialog()
+    end,
+  })
   successButton:SetPoint('BOTTOMLEFT', 5, 5)
   successButton:SetPoint('BOTTOMRIGHT', f, 'BOTTOM', -5, 5)
 
@@ -109,6 +103,8 @@ local function ConfigureFrame(f)
   f.SetOnSuccess = function(self, onSuccess)
     self.onSuccess = onSuccess
   end
+
+  f.configured = true
 end
 
 ---Create Dialog Frame
@@ -124,3 +120,5 @@ inputDialog.Create = function(self)
 
   return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(inputDialog)

@@ -2,6 +2,7 @@
 ..\FrameXML\UI.xsd">
   <!-- Core -->
   <Script file="Core.lua"/>
+  <Script file="FrameBase.lua"/>
   <!-- Frame -->
   <Script file="Frames/Inputs/Tooltip.lua" />
   <Script file="Frames/Inputs/EditBox.lua" />
@@ -9,6 +10,7 @@
   <Script file="Frames/Inputs/Range.lua" />
   <Script file="Frames/Inputs/Toggle.lua" />
   <Script file="Frames/Inputs/Button.lua" />
+  <Script file="Frames/Inputs/SimpleButton.lua" />
   <Script file="Frames/Inputs/ToggleButton.lua" />
   <Script file="Frames/Inputs/LuaEditor.lua" />
   <Script file="Frames/Inputs/Keybind.lua" />
@@ -22,6 +24,7 @@
   <Script file="Frames/Inputs/AnchorPoint.lua" />
   <Script file="Frames/OptionFrames/ModuleItem.lua" />
   <Script file="Frames/OptionFrames/MenuItem.lua" />
+  <Script file="Frames/OptionFrames/OptionGroup.lua" />
   <Script file="Frames/Dialog.lua" />
   <Script file="Frames/ListMenu.lua" />
   <Script file="Frames/SplitOptions.lua" />
@@ -32,6 +35,7 @@
   <Script file="Frames/ScrollFrame.lua" />
   <Script file="Frames/SmoothScrollFrame.lua" />
   <Script file="Frames/InputGroup.lua" />
+  <Script file="Frames/Layout.lua" />
   <Script file="Frames/Inputs/CheckBox.lua" />
   <Script file="Frames/Inputs/TriStateCheckBox.lua" />
   <Script file="Frames/InputDialog.lua" />

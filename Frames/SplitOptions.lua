@@ -48,6 +48,8 @@ local function CreateCategoryLabel(parent)
 
     frame.SetActive = function() end
 
+    ForwardMouseWheel(frame)
+
     return frame
 end
 
@@ -74,6 +76,57 @@ local TEXT_PAD_RIGHT = 6
 local PREVIEW_SIZE = 14
 local PREVIEW_PAD_RIGHT = 4
 local PREVIEW_GAP = 4
+-- Border slack should not enable the bar.
+local SCROLL_FIT_EPSILON = 1
+
+local function GetScrollbarGutter(scroll)
+    local width = scroll.scrollbarWidth or 0
+    local padding = scroll.scrollbarPadding or 0
+    return width + padding * 2
+end
+
+local function ListNeedsScroll(viewport, listHeight)
+    return viewport > 1 and (listHeight - viewport) > SCROLL_FIT_EPSILON
+end
+
+local function MeasureItemListHeight(parent, items, itemGap, itemInsetTop)
+    local contentHeight = itemInsetTop
+    local hasPrev = false
+    for _, item in ipairs(items) do
+        if item.type == 'category' then
+            local rowHeight = EXFrames:ScalePixel(20, parent)
+            local spacingAbove = EXFrames:ScalePixel(item.spacingAbove or 0, parent)
+            if not hasPrev then
+                contentHeight = contentHeight + rowHeight + spacingAbove
+            else
+                contentHeight = contentHeight + rowHeight + itemGap + spacingAbove
+            end
+        else
+            local rowHeight = EXFrames:ScalePixel(item.sublabel ~= nil and 36 or 20, parent)
+            contentHeight = contentHeight + rowHeight + (hasPrev and itemGap or 0)
+        end
+        hasPrev = true
+    end
+    return contentHeight
+end
+
+local function ForwardMouseWheel(row)
+    row:EnableMouseWheel(true)
+    row:SetScript('OnMouseWheel', function(self, delta)
+        local scroll = self.scrollFrame
+        if not scroll and self.GetParent then
+            local parent = self:GetParent()
+            scroll = parent and parent.scrollFrame
+        end
+        if not scroll then
+            return
+        end
+        local handler = scroll.HandleMouseWheel or scroll:GetScript('OnMouseWheel')
+        if handler then
+            handler(scroll, delta)
+        end
+    end)
+end
 
 local function ApplyLabelPoints(button)
     local rightPad = TEXT_PAD_RIGHT
@@ -224,6 +277,8 @@ local function CreateItem(parent, dualLine)
         end
     end)
 
+    ForwardMouseWheel(previewButton)
+
     button:SetScript('OnEnter', function(self)
         ApplyItemVisual(self, self.isActive, true)
     end)
@@ -245,6 +300,8 @@ local function CreateItem(parent, dualLine)
     end)
 
     button:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
+
+    ForwardMouseWheel(button)
 
     return button
 end
@@ -284,17 +341,25 @@ local configure = function(f)
     f.leftWidth = 135
 
     local leftPanel = EXFrames:GetFrame('panel-frame'):Create()
-    leftPanel:SetBackgroundColor(0.05, 0.05, 0.05, 0.8)
+    leftPanel:SetSubtleChrome()
     leftPanel:SetParent(f)
     f.leftPanel = leftPanel
 
     local rightPanel = EXFrames:GetFrame('panel-frame'):Create()
-    rightPanel:SetBackgroundColor(0.05, 0.05, 0.05, 0.8)
+    rightPanel:SetSubtleChrome()
     rightPanel:SetParent(f)
     f.rightPanel = rightPanel
 
     local leftScroll = scrollFrame:Create()
     leftScroll:SetParent(leftPanel)
+    -- Rows pad themselves for the bar, so the scroll child stays full width.
+    leftScroll.scrollbarOverlay = true
+    leftScroll.hideScrollbar = true
+    leftScroll:HookScript('OnSizeChanged', function()
+        if f.RefreshItemScrollLayout then
+            f:RefreshItemScrollLayout()
+        end
+    end)
     f.leftScroll = leftScroll
     f.leftContainer = leftScroll.child
 
@@ -303,9 +368,8 @@ local configure = function(f)
     f.scrollFrame = rightScroll
     f.container = rightScroll.child
 
-    local extraButton = EXFrames:GetFrame('button'):Create()
+    local extraButton = EXFrames:GetFrame('simple-button'):Create(leftPanel)
     extraButton:SetHeight(EXFrames:ScalePixel(30, f))
-    extraButton:SetParent(leftPanel)
     extraButton:Hide()
     f.extraButton = extraButton
 
@@ -395,7 +459,22 @@ local configure = function(f)
         listMenu:ToggleAt(button, entries)
     end
 
+    f.RefreshItemScrollLayout = function(self)
+        if self.refreshingItemScroll or not self.itemData then
+            return
+        end
+        local viewport = self.leftScroll:GetHeight() or 0
+        local needsScroll = ListNeedsScroll(viewport, self.itemListHeight or 0)
+        if needsScroll == self.itemsNeedScroll then
+            return
+        end
+        self:AddItems(self.itemData)
+    end
+
     f.AddItems = function(self, items)
+        self.refreshingItemScroll = true
+        self.itemData = items
+
         local usesDualLine = false
         for _, item in ipairs(items) do
             if item.type ~= 'category' and item.sublabel ~= nil then
@@ -424,6 +503,10 @@ local configure = function(f)
         local itemGap = EXFrames:ScalePixel(3, self.leftPanel)
         local itemInsetX = EXFrames:ScalePixel(3, self.leftPanel)
         local itemInsetTop = EXFrames:ScalePixel(5, self.leftPanel)
+        local viewport = self.leftScroll:GetHeight() or 0
+        local needsScroll = ListNeedsScroll(viewport, MeasureItemListHeight(self.leftPanel, items, itemGap, itemInsetTop))
+        local rightInset = itemInsetX + (needsScroll and GetScrollbarGutter(self.leftScroll) or 0)
+        local firstRow, firstRowY
         local itemIndex = 0
         local categoryIndex = 0
         local contentHeight = itemInsetTop
@@ -435,14 +518,17 @@ local configure = function(f)
                     self.categoryLabels[categoryIndex] = CreateCategoryLabel(self.leftContainer)
                 end
                 local label = self.categoryLabels[categoryIndex]
+                label.scrollFrame = self.leftScroll
                 label:SetText(item.label)
                 label:SetColors(item.bgColor, item.textColor)
                 label:Show()
                 local gapAbove = itemGap + EXFrames:ScalePixel(item.spacingAbove or 0, self.leftPanel)
                 if not prev then
                     local topOffset = itemInsetTop + EXFrames:ScalePixel(item.spacingAbove or 0, self.leftPanel)
-                    label:SetPoint('TOPLEFT', self.leftContainer, 'TOPLEFT', itemInsetX, -topOffset)
-                    label:SetPoint('TOPRIGHT', self.leftContainer, 'TOPRIGHT', -itemInsetX, -topOffset)
+                    firstRow = label
+                    firstRowY = -topOffset
+                    label:SetPoint('TOPLEFT', self.leftContainer, 'TOPLEFT', itemInsetX, firstRowY)
+                    label:SetPoint('TOPRIGHT', self.leftContainer, 'TOPRIGHT', -rightInset, firstRowY)
                     contentHeight = contentHeight + label:GetHeight() + EXFrames:ScalePixel(item.spacingAbove or 0, self.leftPanel)
                 else
                     label:SetPoint('TOPLEFT', prev, 'BOTTOMLEFT', 0, -gapAbove)
@@ -461,6 +547,7 @@ local configure = function(f)
                     self.items[itemIndex] = CreateItem(self.leftContainer, wantsDual)
                 end
                 local button = self.items[itemIndex]
+                button.scrollFrame = self.leftScroll
                 button.ID = item.ID
                 button:SetText(item.label)
                 button:SetSubText(item.sublabel)
@@ -471,8 +558,10 @@ local configure = function(f)
                     self:ShowItemContextMenu(button)
                 end
                 if not prev then
-                    button:SetPoint('TOPLEFT', self.leftContainer, 'TOPLEFT', itemInsetX, -itemInsetTop)
-                    button:SetPoint('TOPRIGHT', self.leftContainer, 'TOPRIGHT', -itemInsetX, -itemInsetTop)
+                    firstRow = button
+                    firstRowY = -itemInsetTop
+                    button:SetPoint('TOPLEFT', self.leftContainer, 'TOPLEFT', itemInsetX, firstRowY)
+                    button:SetPoint('TOPRIGHT', self.leftContainer, 'TOPRIGHT', -rightInset, firstRowY)
                 else
                     button:SetActive(false)
                     button:SetPoint('TOPLEFT', prev, 'BOTTOMLEFT', 0, -itemGap)
@@ -510,8 +599,35 @@ local configure = function(f)
             end
         end
 
-        self.leftContainer:SetHeight(math.max(contentHeight + itemInsetTop, 1))
+        local actualNeedsScroll = ListNeedsScroll(viewport, contentHeight)
+        if actualNeedsScroll ~= needsScroll and firstRow then
+            needsScroll = actualNeedsScroll
+            rightInset = itemInsetX + (needsScroll and GetScrollbarGutter(self.leftScroll) or 0)
+            firstRow:SetPoint('TOPRIGHT', self.leftContainer, 'TOPRIGHT', -rightInset, firstRowY)
+        end
+
+        self.itemListHeight = contentHeight
+        self.itemsNeedScroll = needsScroll
+        self.leftScroll.hideScrollbar = not needsScroll
+
+        -- Bottom padding must not by itself turn the bar on. Clamp when every row already fits.
+        local childHeight = contentHeight + itemInsetTop
+        if not needsScroll and viewport > 1 then
+            childHeight = math.min(childHeight, viewport)
+        end
+        self.leftContainer:SetHeight(math.max(childHeight, 1))
         self:UpdateLeftScroll()
+        self.refreshingItemScroll = false
+
+        if not self.itemScrollRefreshQueued then
+            self.itemScrollRefreshQueued = true
+            C_Timer.After(0, function()
+                self.itemScrollRefreshQueued = false
+                if self:IsShown() and self.RefreshItemScrollLayout then
+                    self:RefreshItemScrollLayout()
+                end
+            end)
+        end
 
         if EXFrames.RefreshPixelPerfect then
             EXFrames:RefreshPixelPerfect()
@@ -551,17 +667,34 @@ local configure = function(f)
         end
     end
 
+    f.SetContentActionButton = function(self, buttonOptions)
+        if not buttonOptions then
+            if self.contentActionButton then
+                self.contentActionButton:Hide()
+            end
+            return
+        end
+        if not self.contentActionButton then
+            local btn = EXFrames:GetFrame('simple-button'):Create(self.container)
+            btn:SetHeight(EXFrames:ScalePixel(30, self))
+            btn:SetFrameWidth(EXFrames:ScalePixel(140, self))
+            btn:SetPoint('TOPRIGHT', self.container, 'TOPRIGHT', -EXFrames:ScalePixel(5, self.container), -EXFrames:ScalePixel(5, self.container))
+            self.contentActionButton = btn
+        end
+        self.contentActionButton:Show()
+        self.contentActionButton:SetOptionData({
+            label = buttonOptions.text or buttonOptions.label,
+            onClick = buttonOptions.onClick,
+        })
+    end
+
     f.AddExtraButton = function(self, buttonOptions)
         self.extraButton:Show()
-        if buttonOptions.color then
-            self.extraButton:SetColor(unpack(buttonOptions.color))
-        end
-        if buttonOptions.text then
-            self.extraButton:SetText(buttonOptions.text)
-        end
-        if buttonOptions.onClick then
-            self.extraButton:SetOnClick(buttonOptions.onClick)
-        end
+        self.extraButton:SetOptionData({
+            label = buttonOptions.text or buttonOptions.label,
+            onClick = buttonOptions.onClick,
+            icon = buttonOptions.icon,
+        })
         self:ApplyPanelLayout()
     end
 
@@ -573,7 +706,12 @@ local configure = function(f)
     f.Destroy = function(self)
         listMenu:Hide()
         self.extraButton:Hide()
+        if self.contentActionButton then
+            self.contentActionButton:Hide()
+        end
         self.activeID = nil
+        self.itemData = nil
+        self.refreshingItemScroll = false
         if self.scrollFrame then
             self.scrollFrame:Reset()
         end
@@ -606,3 +744,5 @@ splitOptions.Create = function(self)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(splitOptions)

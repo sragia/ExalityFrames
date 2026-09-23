@@ -12,6 +12,7 @@ ns.EXFrames.config = {}
 
 ns.EXFrames.pixelPerfectBackdrops = {}
 ns.EXFrames.inputBorders = {}
+ns.EXFrames.panelChromeFrames = {}
 
 local function resolveScale(region)
   if region and region.GetEffectiveScale then
@@ -146,7 +147,7 @@ ns.EXFrames.RefreshPixelPerfect = function(self)
   for i = #self.pixelPerfectBackdrops, 1, -1 do
     local entry = self.pixelPerfectBackdrops[i]
     if entry.frame and entry.frame.SetBackdrop then
-      if entry.frame:GetNumPoints() == 1 then
+      if entry.frame:GetNumPoints() == 1 and not entry.frame.windowId then
         self:SnapFrameToPixels(entry.frame)
       end
       local bgR, bgG, bgB, bgA = entry.frame:GetBackdropColor()
@@ -163,6 +164,14 @@ ns.EXFrames.RefreshPixelPerfect = function(self)
     end
   end
   self:RefreshInputBorders()
+  for i = #self.panelChromeFrames, 1, -1 do
+    local frame = self.panelChromeFrames[i]
+    if frame and frame.PPBorder and frame.IsShown and frame:IsShown() then
+      frame.PPBorder:SetBorderThickness(frame.PPBorder.thicknessPixels or 1)
+    else
+      table.remove(self.panelChromeFrames, i)
+    end
+  end
 end
 
 local function configureBorderTexture(texture)
@@ -292,11 +301,100 @@ ns.EXFrames.ApplyInputBorder = function(self, frame, borderSize)
   return frame.PPBorder
 end
 
+---@param options? { fillColor?: number[], borderColor?: number[], borderSize?: number, borderShown?: boolean, fillKey?: string }
+ns.EXFrames.ApplyPanelChrome = function(self, frame, options)
+  options = options or {}
+  local solid = (self.assets and self.assets.textures and self.assets.textures.solidWhite)
+    or 'Interface\\Buttons\\WHITE8X8.blp'
+  local fillKey = options.fillKey or 'PanelFill'
+
+  if not frame[fillKey] then
+    local fill = frame:CreateTexture(nil, 'BACKGROUND')
+    fill:SetTexture(solid)
+    fill:SetAllPoints()
+    frame[fillKey] = fill
+    frame.Texture = fill
+  end
+
+  for i = #self.inputBorders, 1, -1 do
+    if self.inputBorders[i] == frame then
+      table.remove(self.inputBorders, i)
+    end
+  end
+
+  local borderSize = options.borderSize or 1
+  if not frame.PPBorder then
+    if self.config.addPixelPerfectBorder then
+      frame.PPBorder = self.config.addPixelPerfectBorder(frame, borderSize, { register = false })
+    else
+      frame.PPBorder = self:AddPixelPerfectBorder(frame, borderSize)
+    end
+  end
+  if frame.PPBorder then
+    frame.PPBorder:SetBorderThickness(borderSize)
+    frame.PPBorder:SetBorderColor(unpack(self.Theme.border))
+  end
+  frame._panelChrome = true
+  if not frame._panelChromeRegistered then
+    table.insert(self.panelChromeFrames, frame)
+    frame._panelChromeRegistered = true
+  end
+
+  frame._panelChromeFillKey = fillKey
+  frame.SetPanelFillColor = function(activeFrame, r, g, b, a)
+    a = a or 1
+    local key = activeFrame._panelChromeFillKey or 'PanelFill'
+    local tex = activeFrame[key] or activeFrame.PanelFill or activeFrame.Texture
+    if tex then
+      tex:SetVertexColor(r, g, b, a)
+      tex:SetShown(a > 0)
+    end
+  end
+
+  frame.SetPanelBorderColor = function(activeFrame, r, g, b, a)
+    if not activeFrame.PPBorder then
+      return
+    end
+    a = a or 1
+    activeFrame.PPBorder:SetBorderColor(r, g, b, a)
+    if a > 0 then
+      activeFrame.PPBorder:Show()
+    else
+      activeFrame.PPBorder:Hide()
+    end
+  end
+
+  frame.SetPanelBorderShown = function(activeFrame, shown)
+    if not activeFrame.PPBorder then
+      return
+    end
+    if shown then
+      activeFrame.PPBorder:Show()
+    else
+      activeFrame.PPBorder:Hide()
+    end
+  end
+
+  if options.fillColor then
+    frame:SetPanelFillColor(unpack(options.fillColor))
+  end
+  if options.borderColor then
+    frame:SetPanelBorderColor(unpack(options.borderColor))
+  end
+  if options.borderShown == false then
+    frame:SetPanelBorderShown(false)
+  elseif options.borderShown ~= false and frame.PPBorder then
+    frame.PPBorder:Show()
+  end
+
+  return frame
+end
+
 ns.EXFrames.RefreshInputBorders = function(self)
   for i = #self.inputBorders, 1, -1 do
     local frame = self.inputBorders[i]
     if frame and frame.PPBorder then
-      if frame:GetNumPoints() == 1 then
+      if frame:GetNumPoints() == 1 and not frame._panelChrome and not frame.windowId then
         self:SnapFrameToPixels(frame)
       end
       frame.PPBorder:SetBorderThickness(frame.PPBorder.thicknessPixels or 1)
@@ -647,6 +745,10 @@ ns.EXFrames.assets = {
       editBoxBg = BASE_PATH .. 'Assets\\Inputs\\editbox-bg',
       editBoxHover = BASE_PATH .. 'Assets\\Inputs\\editbox-hover',
       toggle = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle',
+      toggleBg = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle-bg.png',
+      toggleBgBorder = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle-bg-border.png',
+      toggleBorder = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle-border.png',
+      toggleOrb = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle-orb.png',
       range = {
         dot = BASE_PATH .. 'Assets\\Inputs\\Range\\dot.png',
         dotActive = BASE_PATH .. 'Assets\\Inputs\\Range\\dot-active.png',
@@ -665,6 +767,10 @@ ns.EXFrames.assets = {
         base = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\base.png',
         hover = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\hover.png',
         mark = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\mark.png',
+        bg = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\checkbox-bg.png',
+        border = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\checkbox-border.png',
+        markIcon = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\checkbox-mark.png',
+        x = BASE_PATH .. 'Assets\\Inputs\\Checkbox\\checkbox-x.png',
       },
       colorPicker = {
         hueVertical = BASE_PATH .. 'Assets\\Inputs\\color-picker\\hue_vertical.png',
@@ -676,6 +782,8 @@ ns.EXFrames.assets = {
       closeBold = BASE_PATH .. 'Assets\\Icon\\close-bold.png',
       chevronDown = BASE_PATH .. 'Assets\\Icon\\chevronDown',
       info = BASE_PATH .. 'Assets\\Icon\\info.png',
+      eye = BASE_PATH .. 'Assets\\Icon\\eye.png',
+      eyeOff = BASE_PATH .. 'Assets\\Icon\\eye-off.png',
     },
     tabs = {
       glow = BASE_PATH .. 'Assets\\Tabs\\glow-bottom.png',

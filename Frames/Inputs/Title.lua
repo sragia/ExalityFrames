@@ -56,9 +56,7 @@ local function ConfigureFrame(f)
     f.bg = bg
 
     local bg2 = f:CreateTexture(nil, 'BACKGROUND')
-    bg2:SetTexture(EXFrames.assets.textures.ui.panelBg)
-    bg2:SetTextureSliceMargins(20, 20, 20, 20)
-    bg2:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
+    bg2:SetTexture(EXFrames.assets.textures.solidWhite)
     bg2:SetVertexColor(unpack(EXFrames.Theme.accent))
     bg2:SetPoint('TOPLEFT', bg, 'TOPLEFT', 2, -2)
     bg2:SetPoint('BOTTOMRIGHT', bg, 'BOTTOMRIGHT', 2, -2)
@@ -82,3 +80,5 @@ title.Create = function(self)
     f:Show()
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(title)

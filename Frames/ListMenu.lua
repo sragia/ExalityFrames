@@ -7,8 +7,10 @@ local EXFrames = ns.EXFrames
 local listMenu = EXFrames:GetFrame('list-menu-frame')
 
 local ROW_HEIGHT = 24
+local HEADER_HEIGHT = 16
 local PADDING = 6
 local ROW_GAP = 2
+local HEADER_GAP = 8
 local MIN_WIDTH = 140
 local MAX_WIDTH = 320
 local ICON_COLUMN = 28
@@ -23,26 +25,6 @@ local function unpackColor(color, fallback)
         return fallback[1], fallback[2], fallback[3], fallback[4] or 1
     end
     return 1, 1, 1, 1
-end
-
-local function getBgTexture()
-    return EXFrames.assets.textures.ui.panelBg
-        or EXFrames.assets.textures.ui.inputBg
-        or EXFrames.assets.textures.solidWhite
-end
-
-local function getBorderTexture()
-    return EXFrames.assets.textures.ui.panelBorder or getBgTexture()
-end
-
-local function applySliceTexture(tex, texturePath, r, g, b, a)
-    tex:SetTexture(texturePath)
-    tex:SetVertexColor(r, g, b, a)
-    if tex.SetTextureSliceMargins then
-        tex:SetTextureSliceMargins(6, 6, 6, 6)
-        tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
-    end
-    tex:SetAllPoints()
 end
 
 local function setRowIcon(texture, icon)
@@ -120,7 +102,41 @@ local function positionPanel(panel, anchorBtn)
     end
 end
 
+local function rowExtent(entry)
+    if entry.isHeader then
+        return HEADER_HEIGHT
+    end
+    return ROW_HEIGHT
+end
+
+local function gapBefore(entry, previous)
+    if not previous then
+        return 0
+    end
+    if entry.isHeader then
+        return HEADER_GAP
+    end
+    return ROW_GAP
+end
+
 local function configureRow(row, entry, theme, parentPanel)
+    row.listEntry = entry
+    row.label:ClearAllPoints()
+    row.label:SetPoint('RIGHT', row, 'RIGHT', -ROW_TEXT_INSET, 0)
+
+    if entry.isHeader then
+        row:EnableMouse(false)
+        row.bg:Hide()
+        row.icon:Hide()
+        row.label:SetPoint('LEFT', row, 'LEFT', ROW_TEXT_INSET, 0)
+        row.label:SetText(entry.text or entry.label or '')
+        row.label:SetTextColor(unpackColor(entry.color, theme.textMuted))
+        row:SetScript('OnEnter', nil)
+        row:SetScript('OnLeave', nil)
+        row:SetScript('OnClick', nil)
+        return
+    end
+
     local bgR, bgG, bgB, bgA = unpackColor(nil, theme.backgroundLight)
     local hoverR, hoverG, hoverB, hoverA
     if entry.hoverColor then
@@ -131,17 +147,16 @@ local function configureRow(row, entry, theme, parentPanel)
     end
     local textR, textG, textB, textA = unpackColor(entry.color, theme.text)
 
+    row:EnableMouse(true)
+    row.bg:Show()
     setRowIcon(row.icon, entry.icon)
-    row.label:ClearAllPoints()
     if entry.icon then
         row.label:SetPoint('LEFT', row.icon, 'RIGHT', 6, 0)
     else
         row.label:SetPoint('LEFT', row, 'LEFT', ROW_TEXT_INSET, 0)
     end
-    row.label:SetPoint('RIGHT', row, 'RIGHT', -ROW_TEXT_INSET, 0)
     row.label:SetText(entry.text or entry.label or '')
     row.label:SetTextColor(textR, textG, textB, textA)
-    row.listEntry = entry
 
     row.bg:SetVertexColor(bgR, bgG, bgB, bgA)
     row:SetScript('OnEnter', function(btn)
@@ -157,27 +172,19 @@ local function configureRow(row, entry, theme, parentPanel)
         end
     end)
     row:SetScript('OnClick', function(btn, button)
-        local entry = btn.listEntry
+        local clicked = btn.listEntry
         local keepOpen = false
-        if entry and entry.onClick then
-            local ok, result = pcall(entry.onClick, btn, button)
+        if clicked and clicked.onClick then
+            local ok, result = pcall(clicked.onClick, btn, button)
             keepOpen = ok and result == false
         end
-        if keepOpen or not entry or not entry.onClick or entry.isHeader then
+        if keepOpen or not clicked or not clicked.onClick then
             return
         end
         if parentPanel then
             parentPanel:Hide()
         end
     end)
-
-    if entry.isHeader then
-        row:EnableMouse(false)
-        row.bg:SetVertexColor(unpackColor(nil, theme.backgroundDeep))
-        row.label:SetTextColor(unpackColor(entry.color or theme.textMuted, theme.textMuted))
-    else
-        row:EnableMouse(true)
-    end
 end
 
 local function createPanel(frameName)
@@ -188,13 +195,12 @@ local function createPanel(frameName)
     panel:EnableMouse(true)
     panel:Hide()
 
-    local bg = panel:CreateTexture(nil, 'BACKGROUND')
-    applySliceTexture(bg, getBgTexture(), unpackColor(nil, theme.backgroundDeep))
-    panel.bg = bg
-
-    local border = panel:CreateTexture(nil, 'OVERLAY', nil, 1)
-    applySliceTexture(border, getBorderTexture(), unpackColor(nil, theme.border))
-    panel.border = border
+    EXFrames:ApplyPanelChrome(panel, {
+        fillColor = theme.backgroundDeep,
+        borderColor = theme.border,
+        borderShown = true,
+    })
+    panel.bg = panel.PanelFill
 
     panel.rows = {}
     panel.rowPool = CreateFramePool('Button', panel)
@@ -216,20 +222,25 @@ local function createPanel(frameName)
         end
 
         local width = measureWidth(f, entries)
-        local height = count * (ROW_HEIGHT + ROW_GAP) - ROW_GAP + (PADDING * 2)
+        local height = PADDING * 2
+        for index, entry in ipairs(entries) do
+            height = height + gapBefore(entry, entries[index - 1]) + rowExtent(entry)
+        end
         f:SetSize(width + (PADDING * 2), height)
 
         local previous
         for index, entry in ipairs(entries) do
             local row = f.rowPool:Acquire()
             row:SetParent(f)
-            row:SetSize(width, ROW_HEIGHT)
+            row:SetSize(width, rowExtent(entry))
             row:SetFrameLevel(f:GetFrameLevel() + 1)
             row:RegisterForClicks('AnyUp')
 
             if not row.bg then
                 local rowBg = row:CreateTexture(nil, 'BACKGROUND')
-                applySliceTexture(rowBg, getBgTexture(), unpackColor(nil, theme.backgroundLight))
+                rowBg:SetTexture(EXFrames.assets.textures.solidWhite)
+                rowBg:SetAllPoints()
+                rowBg:SetVertexColor(unpackColor(nil, theme.backgroundLight))
                 row.bg = rowBg
 
                 local icon = row:CreateTexture(nil, 'ARTWORK')
@@ -248,7 +259,7 @@ local function createPanel(frameName)
             configureRow(row, entry, theme, f)
 
             if previous then
-                row:SetPoint('TOPLEFT', previous, 'BOTTOMLEFT', 0, -ROW_GAP)
+                row:SetPoint('TOPLEFT', previous, 'BOTTOMLEFT', 0, -gapBefore(entry, entries[index - 1]))
             else
                 row:SetPoint('TOPLEFT', f, 'TOPLEFT', PADDING, -PADDING)
             end

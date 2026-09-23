@@ -2,8 +2,8 @@ local _, ns = ...
 ---@class ExalityFrames
 local EXFrames = ns.EXFrames
 
----@class ExalityFramesButton
-local button = EXFrames:GetFrame('button')
+---@class ExalityFramesSimpleButton
+local simpleButton = EXFrames:GetFrame('simple-button')
 
 ---@class ExalityFramesDialogFrame
 local dialog = EXFrames:GetFrame('dialog-frame')
@@ -34,19 +34,11 @@ local function ConfigureFrame(f)
     EXFrames.utils.animation.diveIn(f, 0.2, 0, 20, 'IN', f.fadeIn)
     EXFrames.utils.animation.diveIn(f, 0.2, 0, -20, 'OUT', f.fadeOut)
 
-    local background = f:CreateTexture(nil, 'BACKGROUND')
-    background:SetTexture(EXFrames.assets.textures.ui.panelBg)
-    background:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
-    background:SetTextureSliceMargins(8, 8, 8, 8)
-    background:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-    background:SetAllPoints()
-
-    local border = f:CreateTexture(nil, 'OVERLAY', nil, 1)
-    border:SetTexture(EXFrames.assets.textures.ui.panelBorder)
-    border:SetVertexColor(unpack(EXFrames.Theme.border))
-    border:SetTextureSliceMargins(8, 8, 8, 8)
-    border:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-    border:SetAllPoints()
+    EXFrames:ApplyPanelChrome(f, {
+        fillColor = EXFrames.Theme.backgroundDeep,
+        borderColor = EXFrames.Theme.border,
+        borderShown = true,
+    })
 
     local text = f:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
@@ -74,23 +66,23 @@ local function ConfigureFrame(f)
         self:OrganizeButtons()
     end
 
-    f.buttons = { button:Create(nil, f), button:Create(nil, f), button:Create(nil, f) }
+    f.buttons = { simpleButton:Create(f), simpleButton:Create(f), simpleButton:Create(f) }
 
     f.OrganizeButtons = function(self)
         local prev = nil
-        for _, button in ipairs(self.buttons) do
-            button:ClearAllPoints()
+        for _, btn in ipairs(self.buttons) do
+            btn:ClearAllPoints()
         end
 
         for indx, btnConfig in ipairs(self.buttonConfigs) do
             local btn = self.buttons[indx]
-            btn:SetText(btnConfig.text)
-            if (btnConfig.color) then
-                btn:SetColor(unpack(btnConfig.color))
-            end
-            if (btnConfig.onClick) then
-                btn.onClick = btnConfig.onClick
-            end
+            btn:SetOptionData({
+                label = btnConfig.text,
+                color = btnConfig.color,
+                hoverColor = btnConfig.hoverColor,
+                hoverBorderColor = btnConfig.hoverBorderColor,
+                onClick = btnConfig.onClick,
+            })
             if (prev) then
                 btn:SetPoint('BOTTOMLEFT', prev, 'BOTTOMRIGHT', 5, 0)
             else
@@ -101,6 +93,8 @@ local function ConfigureFrame(f)
         end
         prev:SetPoint('BOTTOMRIGHT', self, 'BOTTOMRIGHT', -5, 5)
     end
+
+    f.configured = true
 end
 
 ---Create Dialog Frame
@@ -116,3 +110,5 @@ dialog.Create = function(self)
 
     return f
 end
+
+EXFrames.FrameBase.StandardizeCreate(dialog)

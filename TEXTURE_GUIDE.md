@@ -22,22 +22,22 @@ The margin in `SetTextureSliceMargins` must equal the corner radius in source pi
 
 | Group | Radius | Margin | Elements |
 |---|---|---|---|
-| **8px** | 8px | 8 | Panel, Window, Dialog |
+| **8px** | 8px | 8 | Legacy PNG paths only (see panel chrome note below) |
 | **6px** | 6px | 6 | Button, Dropdown, EditBox, Title, MenuItem, Tab |
 
 Fill textures and border textures within the same group share the same corner radius — **they must align pixel-perfectly**.
 
-### `ui.panelBg` — panels, window background, dialogs
-- **File:** `Assets/UI/panel-bg.png`
-- **Canvas:** 128×128, **Code margins:** 8px, **Corner radius:** 8px
-- **Content:** Rounded rectangle, white fill, transparent outside.
-- **Used by:** Window, Panel, Dialog, InputDialog
+### Panel chrome (code — no PNG)
 
-### `ui.panelBorder` — border overlay for panels/window
-- **File:** `Assets/UI/panel-border.png`
-- **Canvas:** 128×128, **Code margins:** 8px, **Corner radius:** 8px (must match `panelBg`)
-- **Content:** Transparent fill, 1–2px white border ring only.
-- **Used by:** Panel (always visible), Window (enable by setting `borderOverlay:SetAlpha(1)`)
+**Panel, Tabs content area, SplitOptions side panels, Window fill, Dialog, InputDialog, InputGroup, Disclaimer, ListMenu** use `EXFrames:ApplyPanelChrome`:
+
+- **Fill:** `textures.solidWhite` + `SetVertexColor`
+- **Border:** `ApplyInputBorder` (1px pixel-perfect edges, `Theme.border`)
+
+### `ui.panelBg` / `ui.panelBorder` — legacy asset slots
+
+- **Files:** `Assets/UI/panel-bg.png`, `Assets/UI/panel-border.png`
+- **Status:** Registered in Core but **not used** by the components above after the rectangle chrome migration. Kept for optional art / other references.
 
 ### `ui.buttonBg` — buttons, close button, title backgrounds
 - **File:** `Assets/UI/button-bg.png`
@@ -65,14 +65,19 @@ Fill textures and border textures within the same group share the same corner ra
 
 ### Tabs — underline + glow (not 9-slice pills)
 
-Tabs no longer use filled `ui.tabActive` / `ui.tabInactive` backgrounds. Chrome is:
+Tab **labels** are unchanged: 1px underline + soft glow strip. Only the **content panel** below the tab bar uses rectangle panel chrome (`panel-frame`).
 
-- **1px underline** — solid color via `SetColorTexture` (`Theme.accent` when active, `Theme.border` otherwise)
-- **`tabs.glow`** — soft glow strip above the underline, accent-tinted, shown only on the active tab
+- **1px underline** — `SetColorTexture` (`Theme.accent` when active, `Theme.border` on hover, muted otherwise)
+- **`tabs.glow`** — soft glow strip above the underline, accent-tinted at runtime
 
 | Slot | File | Notes |
 |---|---|---|
 | `textures.tabs.glow` | `Assets/Tabs/glow-bottom.png` | White on transparent; tinted with `Theme.accent` at runtime. Height ~20px in UI. |
+
+### SplitOptions list rows
+
+- **Row fill:** `textures.solidWhite` + vertex color; **border:** `ApplyInputBorder`
+- **`splitOptions.glow`** — full-row soft overlay on list items (same as before); side panels use rectangle `panel-frame` chrome only
 
 `ui.tabActive` / `ui.tabInactive` slots remain in Core for legacy paths but are **unused** by `tabs-frame`.
 
@@ -98,15 +103,19 @@ Export from Lucide (https://lucide.dev) at 32 px stroke width 2, then:
 
 These are **not** replaced by the theme system and keep their original atlas-based design. They only need to be redrawn in the new color palette.
 
-### Toggle atlas (`Assets/Inputs/Toggle/toggle.tga`)
-- Single 256×256 atlas containing all toggle states (base, border-enabled, border-disabled, thumb-enabled, thumb-disabled).
-- Current layout (texCoords are hardcoded in Toggle.lua). When remaking, keep the exact pixel positions or update the texCoords.
-- Color: track background → `#292224`, enabled border → `#AB2346`, disabled border → `#5b626e`, thumb → `#EEEEEE`.
+### Toggle (`Assets/Inputs/Toggle/`)
+- `toggle-bg.png` — track fill pill (@3x → 44×24 UI); tint `Theme.background`.
+- `toggle-bg-border.png` — track outline pill; tint `border` / `accent`.
+- `toggle-orb.png` — orb fill squircle (20×20); tint fill colors.
+- `toggle-border.png` — orb ring squircle (20×20); tint border colors.
+- No 9-slice; frames match 1× export size. Legacy `toggle.tga` unused.
 
 ### Checkbox (`Assets/Inputs/Checkbox/`)
-- `base.tga` — unchecked box outline, 20×20 source.
-- `hover.tga` — same with lighter border.
-- `mark.tga` — checkmark, white on transparent, 12×12 source.
+- `checkbox-bg.png` — box fill (@2x → 18×18 UI); tint `Theme.background`.
+- `checkbox-border.png` — box outline (18×18); tint `border` / `accent` when checked or tri-state include/negate.
+- `checkbox-mark.png` — checkmark (~12×12 centered); tint `Theme.accent`.
+- `checkbox-x.png` — close/X for tri-state negate (~11×11); tint `Theme.danger`.
+- Legacy `base.png`, `hover.png`, `mark.png` — spell ID submit button only.
 
 ### Range input (`Assets/Inputs/Range/`)
 - `dot.tga`, `dot-active.tga` — slider thumb, 30×30 source, circular, white on transparent.

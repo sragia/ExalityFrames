@@ -12,21 +12,12 @@ inputGroup.Init = function(self)
 end
 
 local function Configure(f)
-    local bg = f:CreateTexture(nil, 'BACKGROUND')
-    bg:SetTexture(EXFrames.assets.textures.ui.panelBg)
-    bg:SetVertexColor(unpack(EXFrames.Theme.backgroundLight))
-    bg:SetTextureSliceMargins(8, 8, 8, 8)
-    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-    bg:SetAllPoints()
-    f.bg = bg
-
-    local border = f:CreateTexture(nil, 'OVERLAY', nil, 1)
-    border:SetTexture(EXFrames.assets.textures.ui.panelBorder)
-    border:SetVertexColor(unpack(EXFrames.Theme.border))
-    border:SetTextureSliceMargins(8, 8, 8, 8)
-    border:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-    border:SetAllPoints()
-    f.border = border
+    EXFrames:ApplyPanelChrome(f, {
+        fillColor = EXFrames.Theme.backgroundLight,
+        borderColor = EXFrames.Theme.border,
+        borderShown = true,
+    })
+    f.bg = f.PanelFill
 
     local name = f:CreateFontString(nil, 'OVERLAY')
     name:SetFont(EXFrames.assets.font.default(), 12, 'OUTLINE')
@@ -55,7 +46,6 @@ local function Configure(f)
             child:SetFrameLevel(frameLevel + 5)
             if (child:GetWidth() > width) then
                 width = child:GetWidth()
-                widestChild = child
             end
             height = height + child:GetHeight() + 10
             prev = child

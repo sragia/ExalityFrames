@@ -29,6 +29,7 @@ local frame = EXFrames:GetFrame('frame-id')
 | Name                | ID                      |
 | ------------------- | ----------------------- |
 | Button              | `'button'`              |
+| Simple Button       | `'simple-button'`       |
 | CheckBox            | `'checkbox'`            |
 | Color Picker        | `'color-picker'`        |
 | Description         | `'description'`         |
@@ -50,3 +51,4 @@ local frame = EXFrames:GetFrame('frame-id')
 | Name        | ID              |
 | ----------- | --------------- |
 | Module Item | `'module-item'` |
+| Option Group | `'option-group'` |
