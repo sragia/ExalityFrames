@@ -34,10 +34,10 @@ Fill textures and border textures within the same group share the same corner ra
 - **Fill:** `textures.solidWhite` + `SetVertexColor`
 - **Border:** `ApplyInputBorder` (1px pixel-perfect edges, `Theme.border`)
 
-### `ui.panelBg` / `ui.panelBorder` — legacy asset slots
+### `ui.panelBg` / `ui.panelBorder`
 
 - **Files:** `Assets/UI/panel-bg.png`, `Assets/UI/panel-border.png`
-- **Status:** Registered in Core but **not used** by the components above after the rectangle chrome migration. Kept for optional art / other references.
+- **Status:** ExalityFrames components use rectangle chrome instead. The host addon still draws these (minimap, currencies, reputation).
 
 ### `ui.buttonBg` — buttons, close button, title backgrounds
 - **File:** `Assets/UI/button-bg.png`
@@ -50,12 +50,6 @@ Fill textures and border textures within the same group share the same corner ra
 - **Canvas:** 128×128, **Code margins:** 6px, **Corner radius:** 6px
 - **Content:** Same shape as `buttonBg` — can be the same file if you want identical rounding.
 - **Used by:** EditBox bg, Dropdown bg
-
-### `ui.inputBorder` — edit box border overlay
-- **File:** `Assets/UI/input-border.png`
-- **Canvas:** 128×128, **Code margins:** 6px, **Corner radius:** 6px (must match `inputBg`)
-- **Content:** Transparent fill, 1–2px white border ring. Tinted `border` color normally, `accent` on hover/focus.
-- **Used by:** EditBox border
 
 ### `ui.menuItemBg` — nav menu rows
 - **File:** `Assets/UI/menu-item-bg.png`
@@ -108,7 +102,7 @@ These are **not** replaced by the theme system and keep their original atlas-bas
 - `toggle-bg-border.png` — track outline pill; tint `border` / `accent`.
 - `toggle-orb.png` — orb fill squircle (20×20); tint fill colors.
 - `toggle-border.png` — orb ring squircle (20×20); tint border colors.
-- No 9-slice; frames match 1× export size. Legacy `toggle.tga` unused.
+- No 9-slice; frames match 1× export size.
 
 ### Checkbox (`Assets/Inputs/Checkbox/`)
 - `checkbox-bg.png` — box fill (@2x → 18×18 UI); tint `Theme.background`.
@@ -116,11 +110,6 @@ These are **not** replaced by the theme system and keep their original atlas-bas
 - `checkbox-mark.png` — checkmark (~12×12 centered); tint `Theme.accent`.
 - `checkbox-x.png` — close/X for tri-state negate (~11×11); tint `Theme.danger`.
 - Legacy `base.png`, `hover.png`, `mark.png` — spell ID submit button only.
-
-### Range input (`Assets/Inputs/Range/`)
-- `dot.tga`, `dot-active.tga` — slider thumb, 30×30 source, circular, white on transparent.
-- `track.tga` — horizontal track background, 8 px tall, any width, can be a flat solid bar.
-- `left-arrow.tga`, `right-arrow.tga`, `left-arrow-active.tga`, `right-arrow-active.tga` — 24×24 source, Lucide `chevron-left`/`chevron-right`.
 
 ### Anchor point selector (`Assets/Inputs/Anchor/`)
 - `point-inactive.tga`, `point-active.tga` — 32×32 source, small dot or diamond shape.

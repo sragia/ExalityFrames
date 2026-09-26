@@ -737,10 +737,7 @@ ns.EXFrames.assets = {
       panelBorder    = BASE_PATH .. "Assets\\UI\\panel-border.png",     -- border, margins 20
       buttonBg       = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 6
       inputBg        = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 40
-      swatchMask     = BASE_PATH .. "Assets\\UI\\input-bg.png",
-      inputBorder    = BASE_PATH .. "Assets\\UI\\input-border.png",     -- border, margins 40
       menuItemBg     = BASE_PATH .. "Assets\\UI\\menu-item-bg.png",     -- fill,   margins 6
-      menuItemBorder = BASE_PATH .. "Assets\\UI\\menu-item-border.png", -- border, margins 6
       tabActive      = "Interface\\Buttons\\WHITE8X8.blp",              -- margins 12
       tabInactive    = "Interface\\Buttons\\WHITE8X8.blp",              -- margins 12
     },
@@ -752,24 +749,11 @@ ns.EXFrames.assets = {
     },
     input = {
       buttonBg = BASE_PATH .. 'Assets\\Inputs\\button-bg.png',
-      buttonHover = BASE_PATH .. 'Assets\\Inputs\\button-hover.png',
-      editBoxBg = BASE_PATH .. 'Assets\\Inputs\\editbox-bg',
       editBoxHover = BASE_PATH .. 'Assets\\Inputs\\editbox-hover',
-      toggle = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle',
       toggleBg = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle-bg.png',
       toggleBgBorder = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle-bg-border.png',
       toggleBorder = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle-border.png',
       toggleOrb = BASE_PATH .. 'Assets\\Inputs\\Toggle\\toggle-orb.png',
-      range = {
-        dot = BASE_PATH .. 'Assets\\Inputs\\Range\\dot.png',
-        dotActive = BASE_PATH .. 'Assets\\Inputs\\Range\\dot-active.png',
-        editBox = BASE_PATH .. 'Assets\\Inputs\\Range\\editbox.png',
-        leftArrow = BASE_PATH .. 'Assets\\Inputs\\Range\\left-arrow.png',
-        leftArrowActive = BASE_PATH .. 'Assets\\Inputs\\Range\\left-arrow-active.png',
-        rightArrow = BASE_PATH .. 'Assets\\Inputs\\Range\\right-arrow.png',
-        rightArrowActive = BASE_PATH .. 'Assets\\Inputs\\Range\\right-arrow-active.png',
-        track = BASE_PATH .. 'Assets\\Inputs\\Range\\track.png',
-      },
       anchorPoint = {
         active = BASE_PATH .. 'Assets\\Inputs\\Anchor\\point-active.png',
         inactive = BASE_PATH .. 'Assets\\Inputs\\Anchor\\point-inactive.png',
@@ -790,7 +774,6 @@ ns.EXFrames.assets = {
     },
     icon = {
       close = BASE_PATH .. 'Assets\\Icon\\close.png',
-      closeBold = BASE_PATH .. 'Assets\\Icon\\close-bold.png',
       chevronDown = BASE_PATH .. 'Assets\\Icon\\chevronDown',
       info = BASE_PATH .. 'Assets\\Icon\\info.png',
       eye = BASE_PATH .. 'Assets\\Icon\\eye.png',
@@ -798,23 +781,10 @@ ns.EXFrames.assets = {
     },
     tabs = {
       glow = BASE_PATH .. 'Assets\\Tabs\\glow-bottom.png',
-      active = BASE_PATH .. 'Assets\\Tabs\\active.png',
-      inactive = BASE_PATH .. 'Assets\\Tabs\\inactive.png',
-    },
-    menuItem = {
-      bg = BASE_PATH .. 'Assets\\MenuItem\\bg.png',
-      border = BASE_PATH .. 'Assets\\MenuItem\\border.png',
-      expandBg = BASE_PATH .. 'Assets\\MenuItem\\expand-bg.png',
-      glow = BASE_PATH .. 'Assets\\MenuItem\\glow.png',
-      minus = BASE_PATH .. 'Assets\\MenuItem\\minus.png',
-      plus = BASE_PATH .. 'Assets\\MenuItem\\plus.png',
     },
     splitOptions = {
       glow = BASE_PATH .. 'Assets\\SplitOptions\\glow.png',
     },
-    titleBg = BASE_PATH .. 'Assets\\title-bg.png',
-    statusBar = BASE_PATH .. 'Assets\\StatusBar\\statusBar',
-    solidBg = BASE_PATH .. 'Assets\\white.png',
   },
   backdrop = {
     DEFAULT = {
