@@ -47,16 +47,9 @@ local function ConfigureFrame(f, options)
     input:SetPoint('BOTTOMRIGHT', -inset, inset)
     input:SetTextInsets(10, 10, 0, 0)
 
-    f.SetInputValue = function(self, value)
-        self:SetValue('inputValue', value)
-        if (f.onChange) then
-            f.onChange(value)
-        end
-    end
-
-    input:SetScript('OnTextChanged', function(editbox, changed)
-        if (changed) then
-            f:SetInputValue(editbox:GetText())
+    input:SetScript('OnTextChanged', function(editbox, userInput)
+        if userInput and f.onChange and not f.suppressOnChange then
+            f.onChange(editbox:GetText())
         end
     end)
 
@@ -79,8 +72,6 @@ local function ConfigureFrame(f, options)
     f.GetEditorValue = function(self)
         return input:GetText()
     end
-
-    f.SetInputValue = f.SetEditorValue
 
     local function setBorderActive(active)
         inputArea:SetInputBorderActive(active)
