@@ -18,6 +18,24 @@ end
 local DEFAULT_CATEGORY_BG = { 0.18, 0.18, 0.18, 0.7 }
 local DEFAULT_CATEGORY_TEXT = { 0.65, 0.65, 0.65, 1 }
 
+local function ForwardMouseWheel(row)
+    row:EnableMouseWheel(true)
+    row:SetScript('OnMouseWheel', function(self, delta)
+        local scroll = self.scrollFrame
+        if not scroll and self.GetParent then
+            local parent = self:GetParent()
+            scroll = parent and parent.scrollFrame
+        end
+        if not scroll then
+            return
+        end
+        local handler = scroll.HandleMouseWheel or scroll:GetScript('OnMouseWheel')
+        if handler then
+            handler(scroll, delta)
+        end
+    end)
+end
+
 local function CreateCategoryLabel(parent)
     local frame = CreateFrame('Frame', nil, parent)
     frame:SetHeight(EXFrames:ScalePixel(20, parent))
@@ -108,24 +126,6 @@ local function MeasureItemListHeight(parent, items, itemGap, itemInsetTop)
         hasPrev = true
     end
     return contentHeight
-end
-
-local function ForwardMouseWheel(row)
-    row:EnableMouseWheel(true)
-    row:SetScript('OnMouseWheel', function(self, delta)
-        local scroll = self.scrollFrame
-        if not scroll and self.GetParent then
-            local parent = self:GetParent()
-            scroll = parent and parent.scrollFrame
-        end
-        if not scroll then
-            return
-        end
-        local handler = scroll.HandleMouseWheel or scroll:GetScript('OnMouseWheel')
-        if handler then
-            handler(scroll, delta)
-        end
-    end)
 end
 
 local function ApplyLabelPoints(button)

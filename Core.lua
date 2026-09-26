@@ -455,9 +455,19 @@ end
 ---@param self ExalityFrames
 ---Host addons should mainly pass branding here (logo/font). Pixel helpers are built-in;
 ---optional overrides: scalePixel, snapFrame, addPixelPerfectBorder. Colors via SetTheme().
----@param config {logoPath?: string, defaultFontPath?: string, scalePixel?: function, snapFrame?: function, addPixelPerfectBorder?: function}
+---@param config {logoPath?: string, defaultFontPath?: string, scalePixel?: function, snapFrame?: function, addPixelPerfectBorder?: function, persistentStore?: table|fun(): table}
 ns.EXFrames.Configure = function(self, config)
   self.config = config or {}
+  if self.config.persistentStore then
+    self.persistentStore = self.config.persistentStore
+  end
+end
+
+---Table, or a function that returns one, living in the host addon's SavedVariables.
+---Recent colors are stored on that table under `exalityFramesRecentColors`.
+---@param store table|fun(): table
+ns.EXFrames.SetPersistentStore = function(self, store)
+  self.persistentStore = store
 end
 
 local randCharSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
@@ -727,6 +737,7 @@ ns.EXFrames.assets = {
       panelBorder    = BASE_PATH .. "Assets\\UI\\panel-border.png",     -- border, margins 20
       buttonBg       = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 6
       inputBg        = BASE_PATH .. "Assets\\UI\\button-bg.png",        -- fill,   margins 40
+      swatchMask     = BASE_PATH .. "Assets\\UI\\input-bg.png",
       inputBorder    = BASE_PATH .. "Assets\\UI\\input-border.png",     -- border, margins 40
       menuItemBg     = BASE_PATH .. "Assets\\UI\\menu-item-bg.png",     -- fill,   margins 6
       menuItemBorder = BASE_PATH .. "Assets\\UI\\menu-item-border.png", -- border, margins 6

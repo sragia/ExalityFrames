@@ -11,9 +11,26 @@ colorPicker.Init = function(self)
     self.pool = CreateFramePool('Button', UIParent)
 end
 
-local MAX_RECENT_COLORS = 8
+local MAX_RECENT_COLORS = 10
+local RECENT_STORE_KEY = 'exalityFramesRecentColors'
 local sessionRecentColors = {}
 local colorClipboard = nil
+
+local function RecentColors()
+    local store = EXFrames.persistentStore
+    if type(store) == 'function' then
+        store = store()
+    end
+    if type(store) ~= 'table' then
+        return sessionRecentColors
+    end
+    local list = store[RECENT_STORE_KEY]
+    if type(list) ~= 'table' then
+        list = {}
+        store[RECENT_STORE_KEY] = list
+    end
+    return list
+end
 
 local function Clamp01(value)
     if value < 0 then
@@ -92,15 +109,16 @@ local function ParseHex(input)
 end
 
 local function AddRecentColor(color)
+    local recentColors = RecentColors()
     local nextColor = CopyColor(color)
-    for i = #sessionRecentColors, 1, -1 do
-        if ColorEquals(sessionRecentColors[i], nextColor) then
-            table.remove(sessionRecentColors, i)
+    for i = #recentColors, 1, -1 do
+        if ColorEquals(recentColors[i], nextColor) then
+            table.remove(recentColors, i)
         end
     end
-    table.insert(sessionRecentColors, 1, nextColor)
-    while #sessionRecentColors > MAX_RECENT_COLORS do
-        table.remove(sessionRecentColors)
+    table.insert(recentColors, 1, nextColor)
+    while #recentColors > MAX_RECENT_COLORS do
+        table.remove(recentColors)
     end
 end
 
@@ -112,29 +130,17 @@ local function ApplyGradient(tex, orientation, startColor, endColor)
     end
 end
 
-local function ConfigureMiniButton(btn, text)
-    btn:SetSize(44, 16)
-    btn:EnableMouse(true)
-    local bg = btn:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetTexture(EXFrames.assets.textures.ui.buttonBg)
-    bg:SetTextureSliceMargins(6, 6, 6, 6)
-    bg:SetTextureSliceMode(Enum.UITextureSliceMode.Tiled)
-    bg:SetVertexColor(unpack(EXFrames.Theme.accent))
-    btn.bg = bg
-
-    local label = btn:CreateFontString(nil, "OVERLAY")
-    label:SetPoint("CENTER")
-    label:SetFont(EXFrames.assets.font.default(), 10, "OUTLINE")
-    label:SetText(text)
-    btn.label = label
-
-    btn:SetScript("OnEnter", function(self)
-        self.bg:SetVertexColor(unpack(EXFrames.Theme.accentLight))
-    end)
-    btn:SetScript("OnLeave", function(self)
-        self.bg:SetVertexColor(unpack(EXFrames.Theme.accent))
-    end)
+local function CreatePickerButton(parent, text, width, height, colors)
+    local btn = EXFrames:GetFrame('simple-button'):Create(parent)
+    btn:SetOptionData({
+        label = text,
+        color = colors and colors.color,
+        borderColor = colors and colors.borderColor,
+        hoverBg = colors and colors.hoverBg,
+        hoverBorderColor = colors and colors.hoverBorderColor,
+    })
+    btn:SetSize(width, height)
+    return btn
 end
 
 local function CreateChannelInput(parent, labelText, width)
@@ -174,17 +180,39 @@ local function ConfigureFrame(f)
     f.hsv = { h = 0, s = 0, v = 1 }
     f.hasOpacity = true
 
+    local BOX_SIZE = 20
+    local CHECKER_TILE = 8
+    local cb = EXFrames.assets.textures.input.checkbox
+
     local colorBoxContainer = CreateFrame('Frame', nil, f)
-    EXFrames:ApplyInputBorder(colorBoxContainer, 1)
-    colorBoxContainer:SetSize(20, 20)
+    colorBoxContainer:SetSize(BOX_SIZE, BOX_SIZE)
     colorBoxContainer:SetPoint('LEFT')
-    local colorBox = colorBoxContainer:CreateTexture(nil, 'BACKGROUND')
-    colorBox:SetTexture(EXFrames.assets.textures.solidBg)
+
+    local colorBoxChecker = colorBoxContainer:CreateTexture(nil, 'BACKGROUND')
+    colorBoxChecker:SetAllPoints()
+    colorBoxChecker:SetTexture(EXFrames.assets.textures.input.colorPicker.alphaChecker, 'REPEAT', 'REPEAT')
+    colorBoxChecker:SetHorizTile(true)
+    colorBoxChecker:SetVertTile(true)
+    colorBoxChecker:SetTexCoord(0, BOX_SIZE / CHECKER_TILE, 0, BOX_SIZE / CHECKER_TILE)
+    local checkerMask = colorBoxContainer:CreateMaskTexture()
+    checkerMask:SetAllPoints(colorBoxChecker)
+    checkerMask:SetTexture(cb.bg, 'CLAMPTOBLACKADDITIVE', 'CLAMPTOBLACKADDITIVE')
+    colorBoxChecker:AddMaskTexture(checkerMask)
+    colorBoxChecker:Hide()
+    f.colorBoxChecker = colorBoxChecker
+
+    local colorBox = colorBoxContainer:CreateTexture(nil, 'ARTWORK')
+    colorBox:SetAllPoints()
+    colorBox:SetTexture(cb.bg)
     colorBox:SetVertexColor(1, 1, 1, 1)
-    local borderInset = EXFrames:ScalePixels(1, colorBoxContainer)
-    colorBox:SetPoint('TOPLEFT', borderInset, -borderInset)
-    colorBox:SetPoint('BOTTOMRIGHT', -borderInset, borderInset)
     f.colorBox = colorBox
+
+    local colorBoxBorder = colorBoxContainer:CreateTexture(nil, 'OVERLAY')
+    colorBoxBorder:SetAllPoints()
+    colorBoxBorder:SetTexture(cb.border)
+    colorBoxBorder:SetVertexColor(unpack(EXFrames.Theme.border))
+    f.colorBoxBorder = colorBoxBorder
+    f.colorBoxContainer = colorBoxContainer
 
     local label = f:CreateFontString(nil, 'OVERLAY')
     label:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
@@ -200,8 +228,8 @@ local function ConfigureFrame(f)
     f.overlay = overlay
 
     local picker = CreateFrame("Frame", nil, overlay)
-    picker:SetSize(332, 290)
-    picker:SetPoint("LEFT", f, "RIGHT", 8, 0)
+    picker:SetSize(332, 264)
+    picker:SetPoint("TOPLEFT", colorBoxContainer, "BOTTOMRIGHT", 4, -4)
     picker:SetFrameStrata("TOOLTIP")
     picker:SetFrameLevel(overlay:GetFrameLevel() + 20)
     picker:Hide()
@@ -272,12 +300,23 @@ local function ConfigureFrame(f)
     hueTexture:SetTexture(EXFrames.assets.textures.input.colorPicker.hueVertical)
     f.hueTexture = hueTexture
 
-    local hueThumb = CreateFrame("Frame", nil, hueFrame)
-    hueThumb:SetSize(20, 4)
-    hueThumb:SetFrameLevel(hueFrame:GetFrameLevel() + 5)
-    local hueThumbTex = hueThumb:CreateTexture(nil, "OVERLAY")
-    hueThumbTex:SetAllPoints()
-    hueThumbTex:SetColorTexture(1, 1, 1, 1)
+    local function AddSliderTick(parent)
+        local thumb = CreateFrame("Frame", nil, parent)
+        thumb:SetSize(20, 4)
+        thumb:SetFrameLevel(parent:GetFrameLevel() + 5)
+
+        local shadow = thumb:CreateTexture(nil, "ARTWORK")
+        shadow:SetPoint("TOPLEFT", 1, -1)
+        shadow:SetPoint("BOTTOMRIGHT", 1, -1)
+        shadow:SetColorTexture(0, 0, 0, 0.75)
+
+        local tex = thumb:CreateTexture(nil, "OVERLAY")
+        tex:SetAllPoints()
+        tex:SetColorTexture(1, 1, 1, 1)
+        return thumb
+    end
+
+    local hueThumb = AddSliderTick(hueFrame)
     f.hueThumb = hueThumb
 
     local alphaFrame = CreateFrame("Frame", nil, picker)
@@ -310,12 +349,7 @@ local function ConfigureFrame(f)
     alphaGradient:SetTexture(EXFrames.assets.textures.solidWhite)
     f.alphaGradient = alphaGradient
 
-    local alphaThumb = CreateFrame("Frame", nil, alphaFrame)
-    alphaThumb:SetSize(20, 4)
-    alphaThumb:SetFrameLevel(alphaFrame:GetFrameLevel() + 5)
-    local alphaThumbTex = alphaThumb:CreateTexture(nil, "OVERLAY")
-    alphaThumbTex:SetAllPoints()
-    alphaThumbTex:SetColorTexture(1, 1, 1, 1)
+    local alphaThumb = AddSliderTick(alphaFrame)
     f.alphaThumb = alphaThumb
 
     local hexArea = CreateFrame("Frame", nil, picker)
@@ -342,10 +376,22 @@ local function ConfigureFrame(f)
     previewLabel:SetPoint("TOPLEFT", svFrame, "BOTTOMLEFT", 0, -8)
     previewLabel:SetText("Prev / Current")
 
+    local checkerTile = 8
+    local function AddCheckerBackground(parent, width, height)
+        local checker = parent:CreateTexture(nil, "BACKGROUND")
+        checker:SetAllPoints()
+        checker:SetTexture(EXFrames.assets.textures.input.colorPicker.alphaChecker, "REPEAT", "REPEAT")
+        checker:SetHorizTile(true)
+        checker:SetVertTile(true)
+        checker:SetTexCoord(0, width / checkerTile, 0, height / checkerTile)
+        return checker
+    end
+
     local prevSwatch = CreateFrame("Button", nil, picker)
     prevSwatch:SetSize(30, 18)
     prevSwatch:SetPoint("TOPLEFT", previewLabel, "BOTTOMLEFT", 0, -4)
     EXFrames:ApplyInputBorder(prevSwatch, 1)
+    AddCheckerBackground(prevSwatch, 30, 18)
     local prevSwatchTex = prevSwatch:CreateTexture(nil, "ARTWORK")
     prevSwatchTex:SetAllPoints()
     prevSwatchTex:SetTexture(EXFrames.assets.textures.solidWhite)
@@ -356,24 +402,36 @@ local function ConfigureFrame(f)
     currentSwatch:SetSize(30, 18)
     currentSwatch:SetPoint("LEFT", prevSwatch, "RIGHT", 6, 0)
     EXFrames:ApplyInputBorder(currentSwatch, 1)
+    AddCheckerBackground(currentSwatch, 30, 18)
     local currentSwatchTex = currentSwatch:CreateTexture(nil, "ARTWORK")
     currentSwatchTex:SetAllPoints()
     currentSwatchTex:SetTexture(EXFrames.assets.textures.solidWhite)
     f.currentSwatchTex = currentSwatchTex
 
-    local copyBtn = CreateFrame("Button", nil, picker)
+    local copyBtn = CreatePickerButton(picker, "Copy", 56, 22)
     copyBtn:SetPoint("TOPLEFT", prevSwatch, "BOTTOMLEFT", 0, -6)
-    ConfigureMiniButton(copyBtn, "Copy")
+    copyBtn:SetOnClick(function()
+        colorClipboard = ColorToHex(f:GetWorkingColor(), f.hasOpacity)
+    end)
     f.copyBtn = copyBtn
 
-    local pasteBtn = CreateFrame("Button", nil, picker)
+    local pasteBtn = CreatePickerButton(picker, "Paste", 56, 22)
     pasteBtn:SetPoint("LEFT", copyBtn, "RIGHT", 6, 0)
-    ConfigureMiniButton(pasteBtn, "Paste")
+    pasteBtn:SetOnClick(function()
+        local parsed = ParseHex(colorClipboard)
+        if not parsed then
+            return
+        end
+        if not f.hasOpacity then
+            parsed.a = 1
+        end
+        f:SetPendingColor(parsed)
+    end)
     f.pasteBtn = pasteBtn
 
     local recentLabel = picker:CreateFontString(nil, "OVERLAY")
     recentLabel:SetFont(EXFrames.assets.font.default(), 10, "OUTLINE")
-    recentLabel:SetPoint("TOPLEFT", copyBtn, "BOTTOMLEFT", 0, -8)
+    recentLabel:SetPoint("BOTTOMLEFT", currentSwatch, "TOPRIGHT", 16, 4)
     recentLabel:SetText("Recent")
 
     local recentButtons = {}
@@ -381,11 +439,12 @@ local function ConfigureFrame(f)
         local swatch = CreateFrame("Button", nil, picker)
         swatch:SetSize(14, 14)
         if i == 1 then
-            swatch:SetPoint("TOPLEFT", recentLabel, "BOTTOMLEFT", 0, -4)
+            swatch:SetPoint("LEFT", currentSwatch, "RIGHT", 16, 0)
         else
             swatch:SetPoint("LEFT", recentButtons[i - 1], "RIGHT", 4, 0)
         end
         EXFrames:ApplyInputBorder(swatch, 1)
+        AddCheckerBackground(swatch, 14, 14)
         local tex = swatch:CreateTexture(nil, "ARTWORK")
         tex:SetAllPoints()
         tex:SetTexture(EXFrames.assets.textures.solidWhite)
@@ -426,18 +485,16 @@ local function ConfigureFrame(f)
         f:ClosePicker()
     end)
 
-    local confirmBtn = CreateFrame("Button", nil, picker)
-    confirmBtn:SetSize(88, 22)
+    local confirmBtn = CreatePickerButton(picker, "Accept", 88, 22, {
+        color = EXFrames.Theme.successDark,
+        borderColor = EXFrames.Theme.success,
+        hoverBg = EXFrames.Theme.success,
+        hoverBorderColor = EXFrames.Theme.success,
+    })
     confirmBtn:SetPoint("TOPLEFT", aInput, "BOTTOMLEFT", 0, -8)
-    EXFrames:ApplyInputBorder(confirmBtn, 1)
-    local confirmBg = confirmBtn:CreateTexture(nil, "BACKGROUND")
-    confirmBg:SetAllPoints()
-    confirmBg:SetTexture(EXFrames.assets.textures.solidWhite)
-    confirmBg:SetVertexColor(unpack(EXFrames.Theme.successDark))
-    local confirmText = confirmBtn:CreateFontString(nil, "OVERLAY")
-    confirmText:SetFont(EXFrames.assets.font.default(), 10, "OUTLINE")
-    confirmText:SetPoint("CENTER")
-    confirmText:SetText("Accept")
+    confirmBtn:SetOnClick(function()
+        f:ConfirmSelection()
+    end)
     f.confirmBtn = confirmBtn
 
     f.SetLabel = function(self, text)
@@ -486,7 +543,7 @@ local function ConfigureFrame(f)
         self.hsv.s = Clamp01(s or 0)
         self.hsv.v = Clamp01(v or 0)
         self.picker:ClearAllPoints()
-        self.picker:SetPoint("TOPLEFT", self, "TOPRIGHT", 8, 0)
+        self.picker:SetPoint("TOPLEFT", self.colorBoxContainer, "BOTTOMRIGHT", 4, -4)
         self.overlay:Show()
         self.picker:Show()
         self:RefreshPickerVisuals()
@@ -569,9 +626,9 @@ local function ConfigureFrame(f)
     f.UpdateRecentSwatches = function(self)
         for i = 1, MAX_RECENT_COLORS do
             local button = self.recentButtons[i]
-            local color = sessionRecentColors[i]
-            if color then
-                button.tex:SetVertexColor(color.r, color.g, color.b, color.a)
+            local color = RecentColors()[i]
+            if type(color) == 'table' and color.r then
+                button.tex:SetVertexColor(color.r, color.g, color.b, color.a or 1)
                 button:Show()
             else
                 button:Hide()
@@ -742,27 +799,11 @@ local function ConfigureFrame(f)
         end
     end)
 
-    copyBtn:SetScript("OnClick", function()
-        colorClipboard = ColorToHex(f:GetWorkingColor(), f.hasOpacity)
-    end)
-
-    pasteBtn:SetScript("OnClick", function()
-        local parsed = ParseHex(colorClipboard)
-        if not parsed then
-            return
-        end
-        local color = parsed
-        if not f.hasOpacity then
-            color.a = 1
-        end
-        f:SetPendingColor(color)
-    end)
-
     for i = 1, MAX_RECENT_COLORS do
         local button = recentButtons[i]
         button:SetScript("OnClick", function()
-            local color = sessionRecentColors[i]
-            if color then
+            local color = RecentColors()[i]
+            if type(color) == 'table' and color.r then
                 f:SetPendingColor(CopyColor(color))
             end
         end)
@@ -829,10 +870,6 @@ local function ConfigureFrame(f)
         end)
     end
 
-    confirmBtn:SetScript("OnClick", function()
-        f:ConfirmSelection()
-    end)
-
     f:Observe('color', function(color, _, _, self)
         local normalized = CopyColor(color)
         if not self.hasOpacity then
@@ -849,6 +886,7 @@ local function ConfigureFrame(f)
         self.hsv.v = Clamp01(v or 0)
 
         self.colorBox:SetVertexColor(normalized.r, normalized.g, normalized.b, normalized.a)
+        self.colorBoxChecker:SetShown(normalized.a < 0.995)
         self.currentSwatchTex:SetVertexColor(normalized.r, normalized.g, normalized.b, normalized.a)
         self:RefreshPickerVisuals()
         if (self.onChange) then

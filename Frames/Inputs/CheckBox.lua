@@ -97,13 +97,6 @@ local function ConfigureFrame(f)
         self:SetWidth(width)
     end
 
-    f:Observe('value', function(value, _, _, self)
-        self:ApplyVisualState(value)
-        if self.onChange and not self.suppressOnChange then
-            self.onChange(value)
-        end
-    end)
-
     f.SetOptionData = function(self, option)
         self.optionData = option
         self:SetLabel(option.label or '')
@@ -126,16 +119,27 @@ checkbox.Create = function(self)
     end
 
     f.hovering = false
-    f:ApplyVisualState(f.value)
 
     f.Destroy = function(self)
         self.onChange = nil
         self.suppressOnChange = nil
+        self._valueObserver = nil
         self.hovering = false
         self:ClearObservable()
         checkbox.pool:Release(self)
     end
 
+    if not f._valueObserver then
+        f._valueObserver = true
+        f:Observe('value', function(value, _, _, self)
+            self:ApplyVisualState(value)
+            if self.onChange and not self.suppressOnChange then
+                self.onChange(value)
+            end
+        end)
+    end
+
+    f:ApplyVisualState(f.value)
     f:Show()
     return f
 end

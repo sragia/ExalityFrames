@@ -18,6 +18,22 @@ menuItem.Init = function(self)
     self.pool = CreateFramePool('Button', UIParent)
 end
 
+local function ApplySelectionChrome(button, selected)
+    if not button.accentBar then
+        return
+    end
+    if selected then
+        button.accentBar:SetWidth(EXFrames:ScalePixels(2, button))
+        button.accentBar:SetVertexColor(unpack(EXFrames.Theme.accent))
+        button.glow:SetVertexColor(unpack(EXFrames.Theme.accent))
+        button.accentBar:Show()
+        button.glow:Show()
+    else
+        button.accentBar:Hide()
+        button.glow:Hide()
+    end
+end
+
 local function ApplyTextState(button, selected, hovered)
     local th = EXFrames.Theme
     local color = selected and th.white or (hovered and th.text or th.textMuted)
@@ -27,6 +43,7 @@ local function ApplyTextState(button, selected, hovered)
     if button.icon then
         button.icon:SetVertexColor(unpack(color))
     end
+    ApplySelectionChrome(button, selected)
 end
 
 local function StyleButton(f, isMain)
@@ -41,6 +58,23 @@ local function StyleButton(f, isMain)
     f.text = text
 
     if (isMain) then
+        local accentBar = f:CreateTexture(nil, 'ARTWORK', nil, 1)
+        accentBar:SetTexture(EXFrames.assets.textures.solidWhite)
+        accentBar:SetSnapToPixelGrid(true)
+        accentBar:SetTexelSnappingBias(0)
+        accentBar:SetPoint('TOPLEFT', f, 'TOPLEFT', 0, 0)
+        accentBar:SetPoint('BOTTOMLEFT', f, 'BOTTOMLEFT', 0, 0)
+        accentBar:Hide()
+        f.accentBar = accentBar
+
+        local glow = f:CreateTexture(nil, 'ARTWORK', nil, 0)
+        glow:SetTexture(EXFrames.assets.textures.splitOptions.glow)
+        glow:SetPoint('TOPLEFT', accentBar, 'TOPRIGHT', 0, 0)
+        glow:SetPoint('BOTTOMLEFT', accentBar, 'BOTTOMRIGHT', 0, 0)
+        glow:SetPoint('RIGHT', f, 'RIGHT', 0, 0)
+        glow:Hide()
+        f.glow = glow
+
         local icon = f:CreateTexture(nil, 'OVERLAY')
         icon:SetSize(COMPACT_ICON_SIZE, COMPACT_ICON_SIZE)
         icon:SetPoint('CENTER')
@@ -171,6 +205,13 @@ local function ConfigureFrame(f)
     f.SetText = function(self, text)
         self.main.text:SetText(text)
         self.tooltipText = text
+    end
+
+    f.SetLabelInset = function(self, inset)
+        local text = self.main.text
+        text:ClearAllPoints()
+        text:SetPoint('LEFT', inset or 8, 0)
+        text:SetPoint('RIGHT', self.main.expand, 'LEFT', -4, 0)
     end
 
     f.SetIcon = function(self, texture)

@@ -46,7 +46,7 @@ local configure = function(frame)
 
     frame.SetSubtleChrome = function(self)
         local fill = EXFrames.Theme.backgroundDeep
-        self:SetBackgroundColor(fill[1], fill[2], fill[3], 0.16)
+        self:SetBackgroundColor(fill[1], fill[2], fill[3], 0.28)
         self:SetBorderColor(0, 0, 0, 0.34)
     end
 
