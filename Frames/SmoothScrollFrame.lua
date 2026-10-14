@@ -121,17 +121,43 @@ local function UpdateThumbPosition(f)
     local maxThumbOffset = math.max(0, trackHeight - thumbHeight)
     local thumbOffset = (f.scrollOffset / maxScroll) * maxThumbOffset
 
-    thumb:SetHeight(thumbHeight)
-    thumb:ClearAllPoints()
-    thumb:SetPoint('TOP', scrollBar, 'TOP', 0, -thumbOffset)
+    if (thumb.appliedHeight ~= thumbHeight) then
+        thumb:SetHeight(thumbHeight)
+        thumb.appliedHeight = thumbHeight
+    end
+    if (not thumb.anchorReady) then
+        thumb:ClearAllPoints()
+        thumb:SetPoint('TOP', scrollBar, 'TOP', 0, 0)
+        thumb.anchorReady = true
+        thumb.appliedOffset = 0
+    end
+    local offset = -thumbOffset
+    local delta = offset - (thumb.appliedOffset or 0)
+    if (delta ~= 0) then
+        thumb:AdjustPointsOffset(0, delta)
+        thumb.appliedOffset = offset
+    end
+end
+
+local function PlaceScrollChild(f, value)
+    if (not f.scrollAnchorReady) then
+        f.child:ClearAllPoints()
+        f.child:SetPoint('TOPLEFT', f.content, 'TOPLEFT', 0, 0)
+        f.scrollAnchorReady = true
+        f.appliedScroll = 0
+    end
+    local delta = value - (f.appliedScroll or 0)
+    if (delta ~= 0) then
+        f.child:AdjustPointsOffset(0, delta)
+        f.appliedScroll = value
+    end
 end
 
 local function ApplyScroll(f, value)
     local maxScroll = GetMaxScroll(f)
     value = math.max(0, math.min(value, maxScroll))
     f.scrollOffset = value
-    f.child:ClearAllPoints()
-    f.child:SetPoint('TOPLEFT', f.content, 'TOPLEFT', 0, value)
+    PlaceScrollChild(f, value)
     UpdateThumbPosition(f)
     if f.onScroll then
         f.onScroll(f, f.scrollOffset)
@@ -367,8 +393,11 @@ local function ConfigureFrame(f)
         if maxScroll <= 0 then
             self.targetScroll = 0
             self.scrollOffset = 0
+            self.scrollAnchorReady = false
+            self.appliedScroll = 0
             self.child:ClearAllPoints()
             self.child:SetPoint('TOPLEFT', self.content, 'TOPLEFT', 0, 0)
+            self.scrollAnchorReady = true
             return
         end
 
@@ -431,6 +460,8 @@ local function ConfigureFrame(f)
         self.smoothUpdateActive = false
         self.scrollOffset = 0
         self.targetScroll = 0
+        self.scrollAnchorReady = false
+        self.appliedScroll = 0
         self.scrollbarSuppressed = false
         self.hideScrollbar = nil
         self.preferredChildWidth = nil
@@ -438,6 +469,10 @@ local function ConfigureFrame(f)
             self.child:SetSize(1, 1)
             self.child:ClearAllPoints()
             self.child:SetPoint('TOPLEFT', self.content, 'TOPLEFT', 0, 0)
+            self.scrollAnchorReady = true
+        end
+        if self.scrollBar and self.scrollBar.thumb then
+            self.scrollBar.thumb.anchorReady = false
         end
         self:UpdateScrollbar()
     end

@@ -5,7 +5,7 @@ local EXFrames = ns.EXFrames
 ---@class WindowDiscordLink : {label?: string, url: string, onClick?: fun(url: string, link: WindowDiscordLink)}
 ---@class LegacyCloseChromeOptions : { width?: number, height?: number, inset?: table<number>, buttonBg?: string, closeIcon?: string, iconSize?: number, normalColor?: table<number>, hoverColor?: table<number> }
 ---@class LegacyChromeOptions : { hideHeaderBar?: boolean, close?: LegacyCloseChromeOptions }
----@class WindowOptions : {size?: table<number>, title?: string, hideVersion?: boolean, showHeaderVersion?: boolean, versionBottom?: boolean, versionBottomOffset?: number, onVersionClick?: function, discordLink?: WindowDiscordLink, legacyChrome?: boolean|LegacyChromeOptions}
+---@class WindowOptions : {name?: string, size?: table<number>, title?: string, hideVersion?: boolean, showHeaderVersion?: boolean, versionBottom?: boolean, versionBottomOffset?: number, onVersionClick?: function, discordLink?: WindowDiscordLink, legacyChrome?: boolean|LegacyChromeOptions}
 
 --- @class ExalityFramesWindowFrame
 local window = EXFrames:GetFrame('window-frame')
@@ -71,7 +71,11 @@ local configure = function(frame)
         elseif not self._userPlaced then
             windowManager:SetValidCenterPosition(self)
         end
-        self.fadeIn:Play()
+        if (self.skipShowAnimation) then
+            self:SetAlpha(1)
+        else
+            self.fadeIn:Play()
+        end
         if (hideAfter) then
             self.timerContainer:Show();
             self.timer:SetMinMaxValues(0, hideAfter)
@@ -729,7 +733,15 @@ end
 ---@param options WindowOptions
 ---@return Frame
 window.Create = function(self, options)
-    local f = self.pool:Acquire()
+    local f
+    local frameName = options and options.name
+    if (frameName) then
+        f = CreateFrame('Frame', frameName, UIParent)
+        f.ignoreFramePositionManager = true
+        f:Hide()
+    else
+        f = self.pool:Acquire()
+    end
     if not f.configured then
         configure(f)
     end
@@ -790,6 +802,10 @@ window.Create = function(self, options)
 
     if options then
         f:Configure(options)
+    end
+
+    if (frameName) then
+        f:Hide()
     end
 
     return f

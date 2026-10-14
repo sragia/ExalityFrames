@@ -185,6 +185,7 @@ local function applyBorderThickness(border, thickness, region)
 
   border.Top:ClearAllPoints()
   border.Top:SetHeight(size)
+  border.Top:SetSnapToPixelGrid(false)
   border.Top:SetPoint('TOPLEFT', frame, 'TOPLEFT', 0, 0)
   border.Top:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', 0, 0)
 
@@ -200,11 +201,13 @@ local function applyBorderThickness(border, thickness, region)
 
   border.Left:ClearAllPoints()
   border.Left:SetWidth(size)
+  border.Left:SetSnapToPixelGrid(false)
   border.Left:SetPoint('TOPLEFT', frame, 'TOPLEFT', 0, 0)
   border.Left:SetPoint('BOTTOMLEFT', frame, 'BOTTOMLEFT', 0, 0)
 
   border.Right:ClearAllPoints()
   border.Right:SetWidth(size)
+  border.Right:SetSnapToPixelGrid(false)
   border.Right:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', 0, 0)
   border.Right:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', 0, 0)
 end

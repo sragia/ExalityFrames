@@ -126,6 +126,7 @@ local function ApplyClosedValueStyling(f, value)
     if optionData and optionData.isTextureDropdown and LSM and value then
         f.texture:SetTexture(LSM:Fetch('statusbar', value))
         f.texture:SetVertexColor(0.8, 0.8, 0.8, 1)
+        f.texture:SetTextureSliceMargins(0, 0, 0, 0)
         f.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
     else
         f.texture:SetTexture(EXFrames.assets.textures.ui.inputBg)
@@ -208,9 +209,11 @@ local function CreateOption(f, frameOptions)
             if (self.optionData and self.optionData.isTextureDropdown and LSM) then
                 self.texture:SetTexture(LSM:Fetch('statusbar', value))
                 self.texture:SetVertexColor(0.8, 0.8, 0.8, 1)
+                self.texture:SetTextureSliceMargins(0, 0, 0, 0)
                 self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
             else
                 self.texture:SetTexture(EXFrames.assets.textures.ui.inputBg)
+                self.texture:SetTextureSliceMargins(6, 6, 6, 6)
                 self.texture:SetVertexColor(unpack(EXFrames.Theme.backgroundDeep))
                 self.texture:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
             end
@@ -368,6 +371,8 @@ local function ConfigureFrame(f, options)
         tex:SetTextureSliceMargins(6, 6, 6, 6)
         tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
         tex:SetVertexColor(unpack(EXFrames.Theme.background))
+        tex:SetSnapToPixelGrid(false)
+        tex:SetTexelSnappingBias(0)
         tex:SetAllPoints()
         f.texture = tex
 
