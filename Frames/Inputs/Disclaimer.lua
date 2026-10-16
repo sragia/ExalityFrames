@@ -40,16 +40,13 @@ local function ConfigureFrame(f)
 
     local icon = f:CreateTexture(nil, 'ARTWORK')
     icon:SetSize(ICON_SIZE, ICON_SIZE)
-    icon:SetPoint('TOPLEFT', HORIZONTAL_PADDING, -VERTICAL_PADDING)
     icon:SetTexture(EXFrames.assets.textures.icon.info)
     f.icon = icon
 
     local text = f:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
-    text:SetPoint('TOPLEFT', icon, 'TOPRIGHT', ICON_TEXT_GAP, 0)
-    text:SetPoint('TOPRIGHT', f, 'TOPRIGHT', -HORIZONTAL_PADDING, -VERTICAL_PADDING)
     text:SetJustifyH('LEFT')
-    text:SetJustifyV('TOP')
+    text:SetJustifyV('MIDDLE')
     text:SetWordWrap(true)
     f.text = text
 
@@ -84,6 +81,12 @@ local function ConfigureFrame(f)
         local contentHeight = math.max(ICON_SIZE, textHeight)
         local height = math.max(MIN_HEIGHT, contentHeight + (VERTICAL_PADDING * 2))
         self:SetHeight(height)
+
+        self.icon:ClearAllPoints()
+        self.text:ClearAllPoints()
+        self.icon:SetPoint('LEFT', HORIZONTAL_PADDING, 0)
+        self.text:SetPoint('LEFT', self.icon, 'RIGHT', ICON_TEXT_GAP, 0)
+        self.text:SetPoint('RIGHT', -HORIZONTAL_PADDING, 0)
     end
 
     f.SetFrameWidth = function(self, width)

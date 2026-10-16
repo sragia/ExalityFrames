@@ -12,31 +12,50 @@ tabs.Init = function(self)
     tabs.pool = CreateFramePool('Frame', UIParent)
 end
 
+local ATLAS_W, ATLAS_H = 211, 45
+-- Horizontal caps cover the curved shadow and the 3px top radius.
+local SLICE_X = 12
+-- Drawn a bit under the sprite's 45px height. Insets stay in the same proportion as the art
+-- (9px shadow, 31px face, 5px shadow) so the face does not drift.
+local FACE_H = 26
+local SHADOW_LEFT, SHADOW_RIGHT = 5, 5
+local SHADOW_TOP, SHADOW_BOTTOM = 8, 4
+local TAB_GAP = 10
+
+-- Inclusive pixel rects: left, top, right, bottom.
+-- Both cells use the full 45px height. The active art ends a row early; cropping it
+-- shorter stretches that cell and drops the face by a pixel.
+local RECTS = {
+    inactive = { 1, 0, 101, 44 },
+    active = { 105, 0, 205, 44 },
+}
+
+local function ApplyTabTexture(tex, key)
+    local rect = RECTS[key]
+    local left, top, right, bottom = rect[1], rect[2], rect[3], rect[4]
+    tex:SetTexture(EXFrames.assets.textures.tabs.atlas)
+    tex:SetTextureSliceMargins(SLICE_X, 0, SLICE_X, 0)
+    tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    tex:SetTexCoord(left / ATLAS_W, (right + 1) / ATLAS_W, top / ATLAS_H, (bottom + 1) / ATLAS_H)
+    tex:SetVertexColor(1, 1, 1, 1)
+end
+
 local function ApplyTabVisual(button, active, hovered)
     local theme = EXFrames.Theme
 
-    button.underline:Show()
-    button.glow:Show()
+    ApplyTabTexture(button.bg, active and 'active' or 'inactive')
 
-    if active then
+    if active or hovered then
         button.text:SetVertexColor(unpack(theme.white))
-        button.underline:SetColorTexture(theme.accent[1], theme.accent[2], theme.accent[3], 1)
-        button.glow:SetVertexColor(theme.accent[1], theme.accent[2], theme.accent[3], 1)
-    elseif hovered then
-        button.text:SetVertexColor(unpack(theme.white))
-        button.underline:SetColorTexture(theme.border[1], theme.border[2], theme.border[3], 1)
-        button.glow:SetVertexColor(theme.textMuted[1], theme.textMuted[2], theme.textMuted[3], 0.55)
     else
         button.text:SetVertexColor(unpack(theme.textMuted))
-        button.underline:SetColorTexture(theme.border[1], theme.border[2], theme.border[3], 0.7)
-        button.glow:SetVertexColor(theme.textMuted[1], theme.textMuted[2], theme.textMuted[3], 0.25)
     end
 end
 
 local function CreateTabButton(parent)
     local button = CreateFrame('Button', nil, parent)
     button.ID = ''
-    button:SetSize(80, 20)
+    button:SetSize(80, FACE_H)
     button.isActive = false
 
     local text = button:CreateFontString(nil, 'OVERLAY')
@@ -45,18 +64,10 @@ local function CreateTabButton(parent)
     text:SetWidth(0)
     button.text = text
 
-    local underline = button:CreateTexture(nil, 'OVERLAY')
-    underline:SetHeight(1)
-    underline:SetPoint('BOTTOMLEFT', text, 'BOTTOMLEFT', -5, -6)
-    underline:SetPoint('BOTTOMRIGHT', text, 'BOTTOMRIGHT', 5, -6)
-    button.underline = underline
-
-    local glow = button:CreateTexture(nil, 'ARTWORK')
-    glow:SetTexture(EXFrames.assets.textures.tabs.glow)
-    glow:SetHeight(20)
-    glow:SetPoint('BOTTOMLEFT', underline, 'TOPLEFT', 0, 0)
-    glow:SetPoint('BOTTOMRIGHT', underline, 'TOPRIGHT', 0, 0)
-    button.glow = glow
+    local bg = button:CreateTexture(nil, 'BACKGROUND')
+    bg:SetPoint('TOPLEFT', -SHADOW_LEFT, SHADOW_TOP)
+    bg:SetPoint('BOTTOMRIGHT', SHADOW_RIGHT, -SHADOW_BOTTOM)
+    button.bg = bg
 
     button.SetActive = function(self, active)
         self.isActive = active and true or false
@@ -149,7 +160,9 @@ local configure = function(frame)
     local tabBar = CreateFrame('Frame', nil, frame)
     tabBar:SetPoint('TOPLEFT', 0, 0)
     tabBar:SetPoint('TOPRIGHT', 0, 0)
-    tabBar:SetHeight(30)
+    -- Shadow is allowed to draw outside this bar.
+    tabBar:SetHeight(FACE_H)
+    tabBar:SetClipsChildren(false)
     frame.tabBar = tabBar
 
     local panel = EXFrames:GetFrame('panel-frame'):Create()
@@ -158,6 +171,8 @@ local configure = function(frame)
     panel:SetPoint('TOPLEFT', tabBar, 'BOTTOMLEFT')
     panel:SetPoint('BOTTOMRIGHT')
     frame.panel = panel
+    -- Bottom shadow overlaps the panel edge, so the bar has to paint above it.
+    tabBar:SetFrameLevel(panel:GetFrameLevel() + 2)
 
     local contentHost = CreateFrame('Frame', nil, panel)
     contentHost:SetFrameLevel(panel:GetFrameLevel() + 1)
@@ -192,9 +207,9 @@ local configure = function(frame)
             button:SetText(tab.label)
             button.onClick = self.onTabClick
             if (not prev) then
-                button:SetPoint('BOTTOMLEFT', self.tabBar, 'BOTTOMLEFT', 5, 1)
+                button:SetPoint('BOTTOMLEFT', self.tabBar, 'BOTTOMLEFT', 5, -1)
             else
-                button:SetPoint('BOTTOMLEFT', prev, 'BOTTOMRIGHT', 3, 0)
+                button:SetPoint('BOTTOMLEFT', prev, 'BOTTOMRIGHT', TAB_GAP, 0)
             end
 
             if (self.activeTabID and self.activeTabID == tab.ID) then

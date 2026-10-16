@@ -733,6 +733,8 @@ ns.EXFrames.assets = {
   textures = {
     solidWhite = "Interface\\Buttons\\WHITE8X8.blp",
     solidWhiteTexture = BASE_PATH .. "Assets\\white-textured.png",
+    scrollThumb = BASE_PATH .. "Assets\\scroll-thumb.png",
+    scrollTrack = BASE_PATH .. "Assets\\scroll-track.png",
 
     -- Swap these for proper 9-slice PNGs when ready. See TEXTURE_GUIDE.md.
     ui = {
@@ -784,9 +786,17 @@ ns.EXFrames.assets = {
     },
     tabs = {
       glow = BASE_PATH .. 'Assets\\Tabs\\glow-bottom.png',
+      atlas = BASE_PATH .. 'Assets\\Tabs\\tabs.png',
+    },
+    panel = {
+      background = BASE_PATH .. 'Assets\\Panel\\background.png',
+      border = BASE_PATH .. 'Assets\\Panel\\border.png',
     },
     splitOptions = {
       glow = BASE_PATH .. 'Assets\\SplitOptions\\glow.png',
+      atlas = BASE_PATH .. 'Assets\\SplitOptions\\buttons.png',
+      itemIconMask = BASE_PATH .. 'Assets\\SplitOptions\\item-icon-mask.png',
+      groupIconMask = BASE_PATH .. 'Assets\\SplitOptions\\group-icon-mask.png',
     },
   },
   backdrop = {

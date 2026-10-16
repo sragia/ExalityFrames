@@ -10,6 +10,8 @@ smoothScrollFrame.pool = {}
 local SCROLL_STEP = 40
 local SMOOTH_SPEED = 16
 local MIN_THUMB_HEIGHT = 24
+-- scroll-thumb.png and scroll-track.png are 4x16; the first and last 2 rows are the rounded caps.
+local SCROLL_CAP = 2
 -- Ignore sub-pixel / rounding overflow so the bar does not appear when content fits.
 local SCROLL_OVERFLOW_EPSILON = 1
 
@@ -278,8 +280,6 @@ local function QueueContentReconcile(f)
 end
 
 local function ConfigureFrame(f)
-    local th = EXFrames.Theme
-
     f.scrollOffset = 0
     f.targetScroll = 0
     f.scrollbarSuppressed = false
@@ -306,9 +306,9 @@ local function ConfigureFrame(f)
     f.scrollBar = scrollBar
 
     local track = scrollBar:CreateTexture(nil, 'BACKGROUND')
-    track:SetTexture(EXFrames.assets.textures.solidWhite)
-    track:SetVertexColor(unpack(th.gray))
-    track:SetAlpha(0.35)
+    track:SetTexture(EXFrames.assets.textures.scrollTrack)
+    track:SetTextureSliceMargins(0, SCROLL_CAP, 0, SCROLL_CAP)
+    track:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
     track:SetAllPoints()
     scrollBar.track = track
 
@@ -318,8 +318,9 @@ local function ConfigureFrame(f)
     thumb:SetPoint('TOP', scrollBar, 'TOP', 0, 0)
 
     local thumbTex = thumb:CreateTexture(nil, 'ARTWORK')
-    thumbTex:SetTexture(EXFrames.assets.textures.solidWhite)
-    thumbTex:SetVertexColor(unpack(th.accent))
+    thumbTex:SetTexture(EXFrames.assets.textures.scrollThumb)
+    thumbTex:SetTextureSliceMargins(0, SCROLL_CAP, 0, SCROLL_CAP)
+    thumbTex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
     thumbTex:SetAlpha(0.75)
     thumbTex:SetAllPoints()
     thumb.thumbTex = thumbTex

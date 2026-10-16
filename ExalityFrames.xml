@@ -7,6 +7,7 @@
   <Script file="Frames/Inputs/Tooltip.lua" />
   <Script file="Frames/Inputs/EditBox.lua" />
   <Script file="Frames/Inputs/SpellIdInput.lua" />
+  <Script file="Frames/Inputs/IconInput.lua" />
   <Script file="Frames/Inputs/Range.lua" />
   <Script file="Frames/Inputs/Toggle.lua" />
   <Script file="Frames/Inputs/Button.lua" />

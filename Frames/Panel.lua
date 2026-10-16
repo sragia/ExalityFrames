@@ -9,12 +9,40 @@ panel.Init = function(self)
     panel.pool = CreateFramePool('Frame', UIParent)
 end
 
+local PANEL_SLICE = 5
+
+local function ApplyPanelTexture(tex, path)
+    tex:SetTexture(path)
+    tex:SetTextureSliceMargins(PANEL_SLICE, PANEL_SLICE, PANEL_SLICE, PANEL_SLICE)
+    tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    tex:SetVertexColor(1, 1, 1, 1)
+    tex:Show()
+end
+
+local function ApplyPanelArt(frame)
+    local textures = EXFrames.assets.textures.panel
+    local fill = frame.PanelFill or frame.Texture
+    if fill then
+        ApplyPanelTexture(fill, textures.background)
+    end
+
+    if not frame.PanelBorder then
+        local border = frame:CreateTexture(nil, 'BORDER')
+        border:SetAllPoints()
+        frame.PanelBorder = border
+    end
+    ApplyPanelTexture(frame.PanelBorder, textures.border)
+
+    if frame.PPBorder then
+        frame.PPBorder:Hide()
+    end
+end
+
 local configure = function(frame)
     EXFrames:ApplyPanelChrome(frame, {
-        fillColor = EXFrames.Theme.background,
-        borderColor = EXFrames.Theme.border,
-        borderShown = true,
+        borderShown = false,
     })
+    ApplyPanelArt(frame)
 
     frame.Destroy = function(self)
         panel.pool:Release(self)
@@ -31,23 +59,18 @@ local configure = function(frame)
                 tex:SetShown(a > 0)
             end
         end
-        if self.PPBorder then
-            if a > 0 then
-                self.PPBorder:Show()
-            else
-                self.PPBorder:Hide()
-            end
-        end
     end
 
     frame.SetBorderColor = function(self, r, g, b, a)
-        self:SetPanelBorderColor(r, g, b, a)
+        a = a or 1
+        if self.PanelBorder then
+            self.PanelBorder:SetVertexColor(r, g, b, a)
+            self.PanelBorder:SetShown(a > 0)
+        end
     end
 
     frame.SetSubtleChrome = function(self)
-        local fill = EXFrames.Theme.backgroundDeep
-        self:SetBackgroundColor(fill[1], fill[2], fill[3], 0.28)
-        self:SetBorderColor(0, 0, 0, 0.34)
+        ApplyPanelArt(self)
     end
 
     frame.configured = true

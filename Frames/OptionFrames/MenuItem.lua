@@ -11,6 +11,9 @@ menuItem.pool = {}
 
 local COMPACT_SIZE = 30
 local COMPACT_ICON_SIZE = 24
+local EXPANDED_ICON_SIZE = 20
+local EXPANDED_ICON_GAP = 6
+local EXPANDED_ICON_NUDGE = 6
 
 menuItem.COMPACT_SIZE = COMPACT_SIZE
 
@@ -18,11 +21,28 @@ menuItem.Init = function(self)
     self.pool = CreateFramePool('Button', UIParent)
 end
 
+local function IsSpriteIcon(spec)
+    return type(spec) == 'table' and spec.texture and spec.inactive and spec.active
+end
+
+local function ApplyIconState(button, selected)
+    local spec = button.iconSpec
+    if not button.icon or not spec then
+        return
+    end
+    if IsSpriteIcon(spec) then
+        local coords = selected and spec.active or spec.inactive
+        button.icon:SetVertexColor(1, 1, 1, 1)
+        button.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+    end
+end
+
 local function ApplySelectionChrome(button, selected)
     if not button.accentBar then
         return
     end
-    if selected then
+    local compact = button.__owner and button.__owner.isCompact
+    if selected and not compact then
         button.accentBar:SetWidth(EXFrames:ScalePixels(2, button))
         button.accentBar:SetVertexColor(unpack(EXFrames.Theme.accent))
         button.glow:SetVertexColor(unpack(EXFrames.Theme.accent))
@@ -34,6 +54,30 @@ local function ApplySelectionChrome(button, selected)
     end
 end
 
+local function LayoutCompactIcon(button)
+    local icon = button.icon
+    icon:ClearAllPoints()
+    icon:SetSize(COMPACT_ICON_SIZE, COMPACT_ICON_SIZE)
+    icon:SetPoint('CENTER')
+end
+
+local function LayoutExpandedIcon(button, inset)
+    local icon = button.icon
+    local text = button.text
+    local iconLeft = math.max(4, (inset or 8) - EXPANDED_ICON_NUDGE)
+    icon:ClearAllPoints()
+    icon:SetSize(EXPANDED_ICON_SIZE, EXPANDED_ICON_SIZE)
+    icon:SetPoint('LEFT', button, 'LEFT', iconLeft, 0)
+    text:ClearAllPoints()
+    text:SetPoint('LEFT', icon, 'RIGHT', EXPANDED_ICON_GAP, 0)
+    local owner = button.__owner
+    if owner and owner.isExpandable then
+        text:SetPoint('RIGHT', button.expand, 'LEFT', -4, 0)
+    else
+        text:SetPoint('RIGHT', button, 'RIGHT', -8, 0)
+    end
+end
+
 local function ApplyTextState(button, selected, hovered)
     local th = EXFrames.Theme
     local color = selected and th.white or (hovered and th.text or th.textMuted)
@@ -41,7 +85,11 @@ local function ApplyTextState(button, selected, hovered)
         button.text:SetTextColor(unpack(color))
     end
     if button.icon then
-        button.icon:SetVertexColor(unpack(color))
+        if IsSpriteIcon(button.iconSpec) then
+            ApplyIconState(button, selected)
+        else
+            button.icon:SetVertexColor(unpack(color))
+        end
     end
     ApplySelectionChrome(button, selected)
 end
@@ -152,6 +200,7 @@ local function ApplyCompactLayout(f, compact)
         f.main.icon:Show()
         f.main.icon:SetAlpha(1)
         f.main.text:SetAlpha(0)
+        LayoutCompactIcon(f.main)
     else
         f:SetHeight(30)
         f.main:SetHeight(30)
@@ -160,8 +209,9 @@ local function ApplyCompactLayout(f, compact)
         f.main:SetPoint('RIGHT')
         f.main.text:Show()
         f.main.text:SetAlpha(1)
-        f.main.icon:Hide()
-        f.main.icon:SetAlpha(0)
+        f.main.icon:Show()
+        f.main.icon:SetAlpha(1)
+        LayoutExpandedIcon(f.main, f.labelInset)
         if (f.isExpandable) then
             f.main.expand:Show()
         end
@@ -208,18 +258,28 @@ local function ConfigureFrame(f)
     end
 
     f.SetLabelInset = function(self, inset)
-        local text = self.main.text
-        text:ClearAllPoints()
-        text:SetPoint('LEFT', inset or 8, 0)
-        text:SetPoint('RIGHT', self.main.expand, 'LEFT', -4, 0)
+        self.labelInset = inset or 8
+        if not self.isCompact then
+            LayoutExpandedIcon(self.main, self.labelInset)
+        end
     end
 
-    f.SetIcon = function(self, texture)
-        self.main.icon:SetTexture(texture)
+    f.SetIcon = function(self, icon)
+        self.main.iconSpec = icon
+        if IsSpriteIcon(icon) then
+            self.main.icon:SetTexture(icon.texture)
+            ApplyIconState(self.main, self.isSelected)
+        else
+            self.main.icon:SetTexture(icon)
+            self.main.icon:SetTexCoord(0, 1, 0, 1)
+        end
+        self.main.icon:Show()
+        self.main.icon:SetAlpha(1)
         if (self.isCompact) then
-            self.main.icon:Show()
-            self.main.icon:SetAlpha(1)
             self.main.text:Hide()
+            LayoutCompactIcon(self.main)
+        else
+            LayoutExpandedIcon(self.main, self.labelInset)
         end
     end
 
@@ -327,6 +387,9 @@ local function ConfigureFrame(f)
 
     f.SetExpandable = function(self, expandable)
         self.isExpandable = expandable
+        if not self.isCompact then
+            LayoutExpandedIcon(self.main, self.labelInset)
+        end
         if (not self.isCompact) then
             self.main.expand:SetShown(expandable)
         end
