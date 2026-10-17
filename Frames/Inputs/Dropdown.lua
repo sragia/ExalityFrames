@@ -145,7 +145,11 @@ local function UpdateClosedValueDisplay(f, value)
         displayValue = f.optionData.getDisplayValue(value)
     end
     local label, icon = ResolveOptionEntry(f, displayValue)
-    if not label then
+    if not label or label == '' then
+        f.valueDisplay:SetText(' ')
+        if f.valueIcon then
+            f.valueIcon:Hide()
+        end
         return
     end
     ApplyClosedValueStyling(f, displayValue)
@@ -517,7 +521,13 @@ local function ConfigureFrame(f, options)
         self.frameOptions.isTextureDropdown = option.isTextureDropdown
         self.onChange = option.onChange
         if option.currentValue then
-            self:SetValue('value', option.currentValue())
+            local value = option.currentValue()
+            if value ~= nil then
+                self:SetValue('value', value)
+            else
+                self.value = nil
+                UpdateClosedValueDisplay(self, nil)
+            end
         end
     end
 

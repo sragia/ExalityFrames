@@ -752,6 +752,9 @@ ns.EXFrames.assets = {
       resizeBtn = BASE_PATH .. 'Assets\\Window\\resize-btn',
       resizeBtnHighlight = BASE_PATH .. 'Assets\\Window\\resize-btn-highlight',
     },
+    button = {
+      sprite = BASE_PATH .. 'Assets\\Button\\sprite.png',
+    },
     input = {
       buttonBg = BASE_PATH .. 'Assets\\Inputs\\button-bg.png',
       editBoxHover = BASE_PATH .. 'Assets\\Inputs\\editbox-hover',
@@ -792,6 +795,9 @@ ns.EXFrames.assets = {
       background = BASE_PATH .. 'Assets\\Panel\\background.png',
       border = BASE_PATH .. 'Assets\\Panel\\border.png',
     },
+    dialog = {
+      sprite = BASE_PATH .. 'Assets\\dialog-sprite.png',
+    },
     splitOptions = {
       glow = BASE_PATH .. 'Assets\\SplitOptions\\glow.png',
       atlas = BASE_PATH .. 'Assets\\SplitOptions\\buttons.png',
@@ -827,6 +833,39 @@ ns.EXFrames.assets = {
     end,
   }
 }
+
+local DIALOG_ATLAS_W, DIALOG_ATLAS_H = 220, 433
+local DIALOG_SPRITE_RECTS = {
+  background = { 10, 11, 209, 210 },
+  border = { 10, 222, 209, 421 },
+}
+
+local function ApplyDialogSprite(tex, key)
+  local rect = DIALOG_SPRITE_RECTS[key]
+  local left, top, right, bottom = rect[1], rect[2], rect[3], rect[4]
+  tex:SetTexture(ns.EXFrames.assets.textures.dialog.sprite)
+  tex:SetTexCoord(left / DIALOG_ATLAS_W, (right + 1) / DIALOG_ATLAS_W, top / DIALOG_ATLAS_H, (bottom + 1) / DIALOG_ATLAS_H)
+end
+
+function ns.EXFrames:ApplyDialogArt(frame, fillColor, borderColor)
+  if not frame.DialogFill then
+    local fill = frame:CreateTexture(nil, 'BACKGROUND')
+    fill:SetAllPoints()
+    frame.DialogFill = fill
+    local border = frame:CreateTexture(nil, 'BORDER')
+    border:SetAllPoints()
+    frame.DialogBorder = border
+    ApplyDialogSprite(fill, 'background')
+    ApplyDialogSprite(border, 'border')
+    local sliceMode = Enum.UITextureSliceMode.Stretched
+    self.utils.texture.bindSliceToRegion(frame, {
+      { tex = fill, margins = 5, mode = sliceMode },
+      { tex = border, margins = 5, mode = sliceMode },
+    })
+  end
+  frame.DialogFill:SetVertexColor(unpack(fillColor or self.Theme.background))
+  frame.DialogBorder:SetVertexColor(unpack(borderColor or self.Theme.border))
+end
 
 ns.EXFrames.handler = CreateFrame('Frame')
 ns.EXFrames.handler:RegisterEvent('ADDON_LOADED')

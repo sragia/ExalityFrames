@@ -14,6 +14,23 @@ end
 local CONTENT_PAD = 8
 local ICON_TEXT_GAP = 6
 
+local ATLAS_W, ATLAS_H = 128, 212
+local SLICE = 5
+
+-- Inclusive pixel rects: left, top, right, bottom.
+local RECTS = {
+    bg = { 8, 8, 107, 62 },
+    border = { 8, 76, 107, 130 },
+    shadow = { 3, 139, 112, 203 },
+}
+
+local function ApplySprite(tex, key)
+    local rect = RECTS[key]
+    local left, top, right, bottom = rect[1], rect[2], rect[3], rect[4]
+    tex:SetTexture(EXFrames.assets.textures.button.sprite)
+    tex:SetTexCoord(left / ATLAS_W, (right + 1) / ATLAS_W, top / ATLAS_H, (bottom + 1) / ATLAS_H)
+end
+
 local function ApplyContentLayout(f)
     local hasIcon = f.icon:IsShown() and f.icon:GetWidth() > 0
     local label = f.text:GetText()
@@ -36,16 +53,12 @@ end
 
 local function ApplyNormalColors(f)
     f.bg:SetVertexColor(unpack(f.normalBg))
-    if f.PPBorder then
-        f.PPBorder:SetBorderColor(unpack(f.normalBorder))
-    end
+    f.border:SetVertexColor(unpack(f.normalBorder))
 end
 
 local function ApplyHoverColors(f)
     f.bg:SetVertexColor(unpack(f.hoverBg))
-    if f.PPBorder then
-        f.PPBorder:SetBorderColor(unpack(f.hoverBorder))
-    end
+    f.border:SetVertexColor(unpack(f.hoverBorder))
 end
 
 local function ResolveColors(f, option)
@@ -61,18 +74,28 @@ end
 local function ConfigureFrame(f)
     EXFrames.utils.addObserver(f)
 
+    local shadow = f:CreateTexture(nil, 'BACKGROUND')
+    shadow:SetAllPoints()
+    shadow:SetVertexColor(1, 1, 1, 1)
+    ApplySprite(shadow, 'shadow')
+    f.shadow = shadow
+
     local bg = f:CreateTexture(nil, 'BACKGROUND')
-    bg:SetTexture(EXFrames.assets.textures.solidWhite)
     bg:SetAllPoints()
+    ApplySprite(bg, 'bg')
     f.bg = bg
 
-    EXFrames:ApplyInputBorder(f, 1)
+    local border = f:CreateTexture(nil, 'BORDER')
+    border:SetAllPoints()
+    ApplySprite(border, 'border')
+    f.border = border
 
-    f:HookScript('OnSizeChanged', function()
-        if f.PPBorder then
-            f.PPBorder:SetBorderThickness(f.PPBorder.thicknessPixels or 1)
-        end
-    end)
+    local sliceMode = Enum.UITextureSliceMode.Stretched
+    EXFrames.utils.texture.bindSliceToRegion(f, {
+        { tex = shadow, margins = SLICE, mode = sliceMode },
+        { tex = bg, margins = SLICE, mode = sliceMode },
+        { tex = border, margins = SLICE, mode = sliceMode },
+    })
 
     local text = f:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')

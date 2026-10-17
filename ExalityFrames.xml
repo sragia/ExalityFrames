@@ -27,6 +27,7 @@
   <Script file="Frames/OptionFrames/MenuItem.lua" />
   <Script file="Frames/OptionFrames/OptionGroup.lua" />
   <Script file="Frames/Dialog.lua" />
+  <Script file="Frames/TextDialog.lua" />
   <Script file="Frames/ListMenu.lua" />
   <Script file="Frames/SplitOptions.lua" />
   <Script file="Frames/Tabs.lua" />

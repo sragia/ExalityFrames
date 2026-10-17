@@ -33,6 +33,7 @@ local RECTS = {
     lock = { 415, 58, 464, 111 },
     unlock = { 415, 114, 464, 167 },
     inactive = { 418, 179, 461, 222 },
+    import = { 415, 244, 464, 283 },
 
     actionBg = { 6, 61, 199, 85 },
     actionBorder = { 6, 89, 199, 113 },
@@ -88,6 +89,7 @@ local ACTION_ICON = {
     folderPlus = { 18, 16 },
     lock = { 14, 15 },
     unlock = { 14, 15 },
+    import = { 16, 13, -1 },
 }
 local PREVIEW_GAP = 4
 local ICON_GAP = 6
@@ -162,6 +164,18 @@ local function GroupKey(item)
         return item.ID
     end
     return item.label or ''
+end
+
+-- Missing state is collapsed. Explicit false means the user opened the group.
+local function IsGroupCollapsed(owner, key)
+    if not key or not owner or not owner.groupCollapsed then
+        return false
+    end
+    local state = owner.groupCollapsed[key]
+    if state == nil then
+        return true
+    end
+    return state and true or false
 end
 
 local function RowHeight(parent, kind, style)
@@ -508,7 +522,13 @@ local function LayoutGroupContents(header)
         header.iconHolder:SetPoint('CENTER', header.iconShadow, 'CENTER', 0, 0)
         header.iconHolder:SetShown(header.icon:IsShown())
         header.iconMask:SetAllPoints(header.icon)
+        header.iconButton:ClearAllPoints()
+        header.iconButton:SetSize(well, well)
+        header.iconButton:SetPoint('CENTER', header.iconShadow, 'CENTER', 0, 0)
+        header.iconButton:Show()
         leftPad = EXFrames:ScalePixel(GROUP_TEXT_LEFT, header)
+    elseif header.iconButton then
+        header.iconButton:Hide()
     end
 
     header.text:ClearAllPoints()
@@ -542,6 +562,11 @@ local function CreateGroupHeader(parent, style)
     ApplyMask(iconMask, 'groupIconMask')
     icon:AddMaskTexture(iconMask)
     header.iconMask = iconMask
+
+    local iconButton = CreateFrame('Button', nil, header)
+    iconButton:SetFrameLevel(header:GetFrameLevel() + 7)
+    iconButton:Hide()
+    header.iconButton = iconButton
 
     local text = header:CreateFontString(nil, 'OVERLAY')
     text:SetFont(EXFrames.assets.font.default(), 11, 'OUTLINE')
@@ -577,28 +602,76 @@ local function CreateGroupHeader(parent, style)
         if not owner or not self.groupKey then
             return
         end
-        owner.groupCollapsed[self.groupKey] = not owner.groupCollapsed[self.groupKey]
+        owner.groupCollapsed[self.groupKey] = not IsGroupCollapsed(owner, self.groupKey)
         if owner.itemData then
             owner:AddItems(owner.itemData)
         end
     end
 
-    chevronButton:SetScript('OnClick', function(_, mouseButton)
+    local function ShowContextMenu()
+        if header.contextMenuItems and #header.contextMenuItems > 0 and header.onShowContextMenu then
+            header:onShowContextMenu()
+        end
+    end
+
+    local function OpenGroupOptions()
+        if header.selectable and header.onItemClick and header.ID then
+            header:onItemClick(header.ID)
+            return true
+        end
+        return false
+    end
+
+    local function HandleGroupClick(mouseButton, openOptions)
         if header.owner and (header.owner.dragging or header.owner.suppressClick) then
             return
         end
         if mouseButton == 'RightButton' then
-            if header.contextMenuItems and #header.contextMenuItems > 0 and header.onShowContextMenu then
-                header:onShowContextMenu()
-            end
+            ShowContextMenu()
+            return
+        end
+        if openOptions and OpenGroupOptions() then
             return
         end
         ToggleCollapsed(header)
+    end
+
+    chevronButton:SetScript('OnClick', function(_, mouseButton)
+        HandleGroupClick(mouseButton, false)
     end)
     chevronButton:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
+    chevronButton:SetScript('OnEnter', function()
+        header:RefreshChrome()
+    end)
+    chevronButton:SetScript('OnLeave', function()
+        header:RefreshChrome()
+    end)
+
+    iconButton:SetScript('OnClick', function(_, mouseButton)
+        HandleGroupClick(mouseButton, true)
+    end)
+    iconButton:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
+    iconButton:SetScript('OnEnter', function()
+        header:RefreshChrome()
+    end)
+    iconButton:SetScript('OnLeave', function()
+        header:RefreshChrome()
+    end)
+    iconButton:SetScript('OnMouseDown', function(_, mouseButton)
+        if mouseButton ~= 'LeftButton' or not header.owner or not header.owner.reorderEnabled then
+            return
+        end
+        if header.owner.ArmDrag then
+            header.owner:ArmDrag(header)
+        end
+    end)
+    ForwardMouseWheel(iconButton)
 
     header.RefreshChrome = function(self)
-        ApplyItemVisual(self, self.isActive, self:IsMouseOver())
+        local hovered = self:IsMouseOver()
+            or (self.iconButton and self.iconButton:IsShown() and self.iconButton:IsMouseOver())
+            or (self.chevronButton and self.chevronButton:IsMouseOver())
+        ApplyItemVisual(self, self.isActive, hovered)
     end
 
     header.SetActive = function(self, active)
@@ -647,21 +720,8 @@ local function CreateGroupHeader(parent, style)
         end
     end)
 
-    header:SetScript('OnClick', function(self, mouseButton)
-        if self.owner and (self.owner.dragging or self.owner.suppressClick) then
-            return
-        end
-        if mouseButton == 'RightButton' then
-            if self.contextMenuItems and #self.contextMenuItems > 0 and self.onShowContextMenu then
-                self:onShowContextMenu()
-            end
-            return
-        end
-        if self.selectable and self.onItemClick and self.ID then
-            self:onItemClick(self.ID)
-            return
-        end
-        ToggleCollapsed(self)
+    header:SetScript('OnClick', function(_, mouseButton)
+        HandleGroupClick(mouseButton, false)
     end)
 
     header:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
@@ -722,16 +782,17 @@ local function LayoutActionButtonContents(button, pad)
     local iconSize = ACTION_ICON[button.iconKey] or ACTION_ICON.plus
     local iconW = EXFrames:ScalePixel(iconSize[1], button)
     local iconH = EXFrames:ScalePixel(iconSize[2], button)
+    local iconY = iconSize[3] and EXFrames:ScalePixel(iconSize[3], button) or 0
     button.icon:ClearAllPoints()
     button.text:ClearAllPoints()
     button.icon:SetSize(iconW, iconH)
     if hasIcon and hasText then
-        button.icon:SetPoint('LEFT', pad, 0)
+        button.icon:SetPoint('LEFT', pad, iconY)
         button.text:SetPoint('LEFT', button.icon, 'RIGHT', pad, 0)
         button.text:SetPoint('RIGHT', -pad, 0)
         button.text:SetJustifyH('LEFT')
     elseif hasIcon then
-        button.icon:SetPoint('CENTER')
+        button.icon:SetPoint('CENTER', 0, iconY)
     else
         button.text:SetPoint('LEFT', pad, 0)
         button.text:SetPoint('RIGHT', -pad, 0)
@@ -1054,7 +1115,7 @@ local function BuildExplicitRows(self, items)
             if hidden then
                 hiddenParent[item.ID] = true
             else
-                local collapsed = self.groupCollapsed[key] and true or false
+                local collapsed = IsGroupCollapsed(self, key)
                 if collapsed then
                     hiddenParent[item.ID] = true
                 end
@@ -1098,7 +1159,7 @@ local function BuildVisibleRows(self, items)
     for _, item in ipairs(items) do
         if item.type == 'group' then
             currentKey = GroupKey(item)
-            collapsed = self.groupCollapsed[currentKey] and true or false
+            collapsed = IsGroupCollapsed(self, currentKey)
             table.insert(rows, {
                 item = item,
                 kind = 'group',
@@ -1233,7 +1294,8 @@ local configure = function(f)
         local actionShown = self.actionRow:IsShown()
         local actionHeight = actionShown and EXFrames:ScalePixel(ACTION_ROW, self.leftPanel) or 0
         local actionGap = actionShown and EXFrames:ScalePixel(4, self.leftPanel) or 0
-        local listTop = leftScrollInset + actionHeight + actionGap
+        local actionTop = actionShown and rowInset or leftScrollInset
+        local listTop = actionTop + actionHeight + actionGap
 
         self.leftPanel:ClearAllPoints()
         self.leftPanel:SetPoint('TOPLEFT', panelInset, -panelInset)
@@ -1248,8 +1310,8 @@ local configure = function(f)
         self.scrollFrame:SetPoint('BOTTOMRIGHT', -scrollSideInset, scrollBottomInset)
 
         self.actionRow:ClearAllPoints()
-        self.actionRow:SetPoint('TOPLEFT', rowInset, -leftScrollInset)
-        self.actionRow:SetPoint('TOPRIGHT', -rowInset, -leftScrollInset)
+        self.actionRow:SetPoint('TOPLEFT', rowInset, -actionTop)
+        self.actionRow:SetPoint('TOPRIGHT', -rowInset, -actionTop)
         self.actionRow:SetHeight(actionShown and actionHeight or EXFrames:ScalePixel(ACTION_ROW, self.leftPanel))
 
         self.leftScroll:ClearAllPoints()
@@ -1307,13 +1369,9 @@ local configure = function(f)
         end
     end
 
-    f.onItemClick = function(self, id)
+    f.onItemClick = function(_, id)
         listMenu:Hide()
-        f.activeID = id
-        SyncActiveRows(id)
-        if f.onItemChange then
-            f.onItemChange(id)
-        end
+        f:SetActiveItem(id)
     end
 
     f.ShowItemContextMenu = function(self, button)
@@ -1577,7 +1635,7 @@ local configure = function(f)
                 local seen = {}
                 while current and current.parentID and not seen[current.parentID] do
                     seen[current.parentID] = true
-                    if self.groupCollapsed[current.parentID] then
+                    if IsGroupCollapsed(self, current.parentID) then
                         needsLayout = true
                         break
                     end
@@ -1590,7 +1648,7 @@ local configure = function(f)
                         key = GroupKey(item)
                     elseif item.ungrouped or item.type == 'category' then
                         key = nil
-                    elseif item.ID == id and key and self.groupCollapsed[key] then
+                    elseif item.ID == id and key and IsGroupCollapsed(self, key) then
                         needsLayout = true
                         break
                     end
@@ -2110,7 +2168,7 @@ local configure = function(f)
         if target and drag.isGroup and (target.parentID == drag.id or IsUnderGroup(self.itemData, drag.id, target.parentID)) then
             target = nil
         end
-        if target and target.intoGroup and self.groupCollapsed[target.parentID] then
+        if target and target.intoGroup and IsGroupCollapsed(self, target.parentID) then
             if self.expandHoverID ~= target.parentID then
                 self.expandHoverID = target.parentID
                 self.expandHoverAt = GetTime()

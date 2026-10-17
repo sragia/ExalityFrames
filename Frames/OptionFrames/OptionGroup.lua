@@ -28,6 +28,40 @@ local BODY_PADDING = 8
 local PANEL_BG_OPACITY = 0.4
 local HEADER_BG_OPACITY = 0.5
 
+local function applyAccent(f)
+    if not f.accent then
+        return
+    end
+    f.accent:SetHeight(EXFrames:ScalePixels(1, f))
+    f.accent:SetSnapToPixelGrid(false)
+    f.accent:SetTexelSnappingBias(0)
+    if EXUI and EXUI.EnableNativeRounding then
+        EXUI:EnableNativeRounding(f)
+        EXUI:EnableNativeRounding(f.accent)
+    end
+end
+
+EXFrames.optionGroupFrames = EXFrames.optionGroupFrames or {}
+if not EXFrames._optionGroupPixelRefresh then
+    EXFrames._optionGroupPixelRefresh = true
+    local refresh = EXFrames.RefreshPixelPerfect
+    EXFrames.RefreshPixelPerfect = function(self)
+        if refresh then
+            refresh(self)
+        end
+        for i = #self.optionGroupFrames, 1, -1 do
+            local group = self.optionGroupFrames[i]
+            if group and group.ApplyAccent then
+                if group:IsShown() then
+                    group:ApplyAccent()
+                end
+            else
+                table.remove(self.optionGroupFrames, i)
+            end
+        end
+    end
+end
+
 local function SetPanelBackgroundColor(texture, color, opacity)
     texture:SetVertexColor(color[1], color[2], color[3], opacity or PANEL_BG_OPACITY)
 end
@@ -94,10 +128,12 @@ local function ConfigureFrame(f)
     local accent = f:CreateTexture(nil, 'ARTWORK')
     accent:SetTexture(EXFrames.assets.textures.solidWhite)
     accent:SetVertexColor(unpack(th.accent))
-    accent:SetHeight(1)
     accent:SetPoint('TOPLEFT', header, 'BOTTOMLEFT', 0, 0)
     accent:SetPoint('TOPRIGHT', header, 'BOTTOMRIGHT', 0, 0)
     f.accent = accent
+    f.ApplyAccent = applyAccent
+    applyAccent(f)
+    table.insert(EXFrames.optionGroupFrames, f)
 
     local body = CreateFrame('Frame', nil, f)
     body:SetFrameLevel(f:GetFrameLevel() + 2)
@@ -141,13 +177,17 @@ local function ConfigureFrame(f)
             return true
         end
         local p = group:GetParent()
-        while p do
-            if p == layout then
+        local seen = {}
+        local depth = 0
+        while p and depth < 64 do
+            if seen[p] or p == layout then
                 return true
             end
+            seen[p] = true
             p = p:GetParent()
+            depth = depth + 1
         end
-        return false
+        return depth >= 64
     end
 
     f.SetBodyLayout = function(self, layout, excludeLayout)
@@ -204,11 +244,11 @@ local function ConfigureFrame(f)
         self:SetWidth(width)
 
         local headerH = EXFrames:ScalePixel(HEADER_HEIGHT, self)
-        local borderH = EXFrames:ScalePixel(1, self)
+        local borderH = EXFrames:ScalePixels(1, self)
         local pad = EXFrames:ScalePixel(BODY_PADDING, self)
 
         self.header:SetHeight(headerH)
-        self.accent:SetHeight(borderH)
+        self:ApplyAccent()
 
         local totalHeight = headerH + borderH
         if self.isExpanded then

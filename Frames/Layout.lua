@@ -41,24 +41,28 @@ local function ConfigureFrame(f)
         if not layoutFrame or not child or child == layoutFrame then
             return child == layoutFrame
         end
-        if child.GetBody then
-            local groupBody = child:GetBody()
-            local parent = layoutFrame
-            while parent do
-                if parent == child or parent == groupBody then
+        local function walk(parent, matchBody)
+            local seen = {}
+            local depth = 0
+            while parent and depth < 64 do
+                if seen[parent] then
+                    return true
+                end
+                seen[parent] = true
+                if parent == child or (matchBody and parent == matchBody) then
                     return true
                 end
                 parent = parent:GetParent()
+                depth = depth + 1
             end
+            return depth >= 64
         end
-        local parent = layoutFrame:GetParent()
-        while parent do
-            if parent == child then
+        if child.GetBody then
+            if walk(layoutFrame, child:GetBody()) then
                 return true
             end
-            parent = parent:GetParent()
         end
-        return false
+        return walk(layoutFrame:GetParent(), nil)
     end
 
     local function safeSetPoint(frame, ...)
