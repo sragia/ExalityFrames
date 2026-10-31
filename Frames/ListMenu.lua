@@ -8,6 +8,7 @@ local listMenu = EXFrames:GetFrame('list-menu-frame')
 
 local ROW_HEIGHT = 24
 local HEADER_HEIGHT = 16
+local DIVIDER_HEIGHT = 9
 local PADDING = 6
 local ROW_GAP = 2
 local HEADER_GAP = 8
@@ -100,9 +101,16 @@ local function positionPanel(panel, anchorBtn)
     else
         panel:SetPoint(panelPoint .. 'LEFT', anchorBtn, anchorPoint .. 'LEFT', 0, yOff)
     end
+
+    -- Anchors can land between pixels, which drops the unsnapped 1px border lines.
+    EXFrames:SnapFrameToPixels(panel)
+    panel.PPBorder:SetBorderThickness(1)
 end
 
 local function rowExtent(entry)
+    if entry.isDivider then
+        return DIVIDER_HEIGHT
+    end
     if entry.isHeader then
         return HEADER_HEIGHT
     end
@@ -123,8 +131,9 @@ local function configureRow(row, entry, theme, parentPanel)
     row.listEntry = entry
     row.label:ClearAllPoints()
     row.label:SetPoint('RIGHT', row, 'RIGHT', -ROW_TEXT_INSET, 0)
+    row.divider:SetShown(entry.isDivider == true)
 
-    if entry.isHeader then
+    if entry.isHeader or entry.isDivider then
         row:EnableMouse(false)
         row.bg:Hide()
         row.icon:Hide()
@@ -254,6 +263,16 @@ local function createPanel(frameName)
                 label:SetPoint('RIGHT', row, 'RIGHT', -6, 0)
                 label:SetJustifyH('LEFT')
                 row.label = label
+
+                local divider = row:CreateTexture(nil, 'ARTWORK')
+                divider:SetTexture(EXFrames.assets.textures.solidWhite)
+                divider:SetVertexColor(unpackColor(nil, theme.border))
+                divider:SetHeight(EXFrames:ScalePixels(1, row))
+                divider:SetPoint('LEFT', row, 'LEFT', ROW_TEXT_INSET, 0)
+                divider:SetPoint('RIGHT', row, 'RIGHT', -ROW_TEXT_INSET, 0)
+                divider:SetSnapToPixelGrid(true)
+                divider:SetTexelSnappingBias(0)
+                row.divider = divider
             end
 
             configureRow(row, entry, theme, f)
