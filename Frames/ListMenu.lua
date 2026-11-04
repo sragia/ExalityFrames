@@ -339,6 +339,28 @@ listMenu.Hide = function(self)
     end
 end
 
+---@param itemID any passed to each menu item's onClick
+---@param menuItems table[] items can set isVisible and getLabel to resolve on open
+listMenu.BuildContextEntries = function(self, itemID, menuItems)
+    local entries = {}
+    for _, menuItem in ipairs(menuItems) do
+        if not menuItem.isVisible or menuItem.isVisible(itemID) then
+            table.insert(entries, {
+                text = menuItem.getLabel and menuItem.getLabel(itemID) or menuItem.label or menuItem.text,
+                icon = menuItem.icon,
+                color = menuItem.color,
+                hoverColor = menuItem.hoverColor,
+                onClick = function(_, button)
+                    if menuItem.onClick then
+                        menuItem.onClick(itemID, button)
+                    end
+                end,
+            })
+        end
+    end
+    return entries
+end
+
 listMenu.ShowAt = function(self, anchorBtn, entries)
     if not self.panel then
         self:Init()

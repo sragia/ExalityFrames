@@ -553,6 +553,25 @@ local configure = function(frame)
         discordBtn.text = discordText
         BindFooterHover(discordBtn)
 
+        footer.links = {}
+        footer.CreateLink = function(self)
+            local linkSeparator = self:CreateFontString(nil, 'OVERLAY')
+            linkSeparator:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
+            linkSeparator:SetTextColor(unpack(th.textMuted))
+            linkSeparator:SetText('/')
+
+            local linkBtn = CreateFrame('Button', nil, self)
+            local linkText = linkBtn:CreateFontString(nil, 'OVERLAY')
+            linkText:SetFont(EXFrames.assets.font.default(), 10, 'OUTLINE')
+            linkText:SetTextColor(unpack(th.white))
+            linkText:SetJustifyH('LEFT')
+            linkText:SetPoint('LEFT')
+            linkBtn.text = linkText
+            linkBtn.separator = linkSeparator
+            BindFooterHover(linkBtn)
+            return linkBtn
+        end
+
         footer.versionBtn = versionBtn
         footer.separator = separator
         footer.discordBtn = discordBtn
@@ -589,6 +608,18 @@ local configure = function(frame)
                 bar.discordBtn:SetSize(width, FOOTER_HEIGHT)
                 bar.discordBtn:ClearAllPoints()
                 bar.discordBtn:SetPoint('TOPLEFT', bar, 'TOPLEFT', x + FOOTER_ITEM_GAP, 0)
+                x = x + FOOTER_ITEM_GAP + width
+            end
+
+            for _, link in ipairs(bar.links) do
+                link.separator:ClearAllPoints()
+                link.separator:SetPoint('LEFT', bar, 'LEFT', x + FOOTER_ITEM_GAP, 0)
+                x = x + FOOTER_ITEM_GAP + link.separator:GetStringWidth()
+
+                local width = math.max(1, link.text:GetStringWidth())
+                link:SetSize(width, FOOTER_HEIGHT)
+                link:ClearAllPoints()
+                link:SetPoint('TOPLEFT', bar, 'TOPLEFT', x + FOOTER_ITEM_GAP, 0)
                 x = x + FOOTER_ITEM_GAP + width
             end
 
@@ -629,6 +660,21 @@ local configure = function(frame)
             else
                 versionButton:SetScript('OnClick', nil)
             end
+        end
+
+        ---@param link { label: string, onClick: function }
+        frame.AddFooterLink = function(self, link)
+            if not self.versionFooter then
+                return
+            end
+            local bar = self.versionFooter
+            local button = bar:CreateLink()
+            button.text:SetText(link.label)
+            button:SetScript('OnClick', function()
+                link.onClick(self)
+            end)
+            table.insert(bar.links, button)
+            self:UpdateVersionFooterLayout()
         end
 
         frame.SetDiscordLink = function(self, link)

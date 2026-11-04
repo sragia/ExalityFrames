@@ -8,6 +8,8 @@ local tabs = EXFrames:GetFrame('tabs-frame')
 ---@class ExalityFramesSmoothScrollFrame
 local smoothScrollFrame = EXFrames:GetFrame('smooth-scroll-frame')
 
+local listMenu = EXFrames:GetFrame('list-menu-frame')
+
 tabs.Init = function(self)
     tabs.pool = CreateFramePool('Frame', UIParent)
 end
@@ -87,11 +89,18 @@ local function CreateTabButton(parent)
         ApplyTabVisual(self, self.isActive, false)
     end)
 
-    button:SetScript('OnClick', function(self)
+    button:SetScript('OnClick', function(self, mouseButton)
+        if mouseButton == 'RightButton' then
+            if self.contextMenuItems then
+                listMenu:ToggleAt(self, listMenu:BuildContextEntries(self.ID, self.contextMenuItems))
+            end
+            return
+        end
         if (self.onClick) then
             self:onClick(self.ID)
         end
     end)
+    button:RegisterForClicks('LeftButtonUp', 'RightButtonUp')
 
     ApplyTabVisual(button, false, false)
 
@@ -206,6 +215,7 @@ local configure = function(frame)
             button.ID = tab.ID
             button:SetText(tab.label)
             button.onClick = self.onTabClick
+            button.contextMenuItems = tab.contextMenuItems
             if (not prev) then
                 button:SetPoint('BOTTOMLEFT', self.tabBar, 'BOTTOMLEFT', 5, -1)
             else

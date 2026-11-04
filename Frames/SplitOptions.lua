@@ -92,6 +92,10 @@ local ACTION_ICON = {
     import = { 16, 13, -1 },
 }
 local PREVIEW_GAP = 4
+
+local function GetActionIconSize(button)
+    return button.iconSize or ACTION_ICON[button.iconKey]
+end
 local ICON_GAP = 6
 local ADV_WELL = 44
 local ADV_WELL_LEFT = 2
@@ -280,7 +284,8 @@ local function LayoutItemContents(button)
 
     button.text:ClearAllPoints()
     button.subtext:ClearAllPoints()
-    local hasSub = button.itemStyle == 'advanced' and button.subtext:IsShown()
+    -- reserveSubtext keeps the name in the two-line spot even when the second line is empty
+    local hasSub = button.itemStyle == 'advanced' and (button.subtext:IsShown() or button.reserveSubtext)
     if hasSub then
         local top = EXFrames:ScalePixel(-14, button)
         button.text:SetPoint('TOPLEFT', leftPad, top)
@@ -385,6 +390,16 @@ local function CreateItem(parent, style)
             self.subtext:Hide()
         end
         LayoutItemContents(self)
+    end
+
+    button.SetIconDecorator = function(self, decorator)
+        if self.iconCleanup then
+            self.iconCleanup()
+            self.iconCleanup = nil
+        end
+        if decorator then
+            self.iconCleanup = decorator(self.icon, self.iconHolder)
+        end
     end
 
     button.SetIcon = function(self, icon)
@@ -779,7 +794,7 @@ local function LayoutActionButtonContents(button, pad)
     local hasIcon = button.icon:IsShown()
     local label = button.text:GetText()
     local hasText = label and label ~= ''
-    local iconSize = ACTION_ICON[button.iconKey] or ACTION_ICON.plus
+    local iconSize = GetActionIconSize(button) or ACTION_ICON.plus
     local iconW = EXFrames:ScalePixel(iconSize[1], button)
     local iconH = EXFrames:ScalePixel(iconSize[2], button)
     local iconY = iconSize[3] and EXFrames:ScalePixel(iconSize[3], button) or 0
@@ -803,6 +818,7 @@ end
 local function SetActionIcon(button, icon)
     button.icon:SetVertexColor(1, 1, 1, 1)
     button.iconKey = nil
+    button.iconSize = nil
     if icon == nil or icon == '' then
         button.icon:Hide()
         return
@@ -812,6 +828,12 @@ local function SetActionIcon(button, icon)
         if path then
             button.icon:SetTexture(path)
             button.icon:SetTexCoord(0, 1, 0, 1)
+            if icon.width then
+                button.iconSize = { icon.width, icon.height or icon.width }
+            end
+            if icon.color then
+                button.icon:SetVertexColor(unpack(icon.color))
+            end
             button.icon:Show()
         else
             button.icon:Hide()
@@ -961,7 +983,7 @@ local function CreateActionRow(parent)
         end
         local iconW = 0
         if button.icon:IsShown() then
-            local iconSize = ACTION_ICON[button.iconKey] or ACTION_ICON.plus
+            local iconSize = GetActionIconSize(button) or ACTION_ICON.plus
             iconW = EXFrames:ScalePixel(iconSize[1], button)
         end
         local width = pad + (iconW > 0 and (iconW + pad) or 0) + button.text:GetStringWidth() + pad
@@ -1026,7 +1048,7 @@ local function CreateActionRow(parent)
             local hasText = label and label ~= ''
             local width = ActionButtonWidth(button, pad, height)
             if not hasText then
-                local iconSize = ACTION_ICON[button.iconKey]
+                local iconSize = GetActionIconSize(button)
                 if iconSize then
                     width = EXFrames:ScalePixel(iconSize[1] + 2, button)
                 end
@@ -1223,24 +1245,6 @@ local function firstSelectableID(items)
     return nil
 end
 
-local function buildContextMenuEntries(itemID, menuItems)
-    local entries = {}
-    for _, menuItem in ipairs(menuItems) do
-        table.insert(entries, {
-            text = menuItem.label or menuItem.text,
-            icon = menuItem.icon,
-            color = menuItem.color,
-            hoverColor = menuItem.hoverColor,
-            onClick = function(_, button)
-                if menuItem.onClick then
-                    menuItem.onClick(itemID, button)
-                end
-            end,
-        })
-    end
-    return entries
-end
-
 local configure = function(f)
     f.items = {}
     f.groupHeaders = {}
@@ -1378,7 +1382,7 @@ local configure = function(f)
         if not button or not button.contextMenuItems or #button.contextMenuItems == 0 then
             return
         end
-        local entries = buildContextMenuEntries(button.ID, button.contextMenuItems)
+        local entries = listMenu:BuildContextEntries(button.ID, button.contextMenuItems)
         listMenu:ToggleAt(button, entries)
     end
 
@@ -1538,6 +1542,8 @@ local configure = function(f)
                 button:SetHeight(RowHeight(self.leftPanel, 'item', style))
                 button:SetText(item.label)
                 button:SetIcon(item.icon)
+                button:SetIconDecorator(item.iconDecorator)
+                button.reserveSubtext = item.reserveSubtext
                 button:SetSubText(item.sublabel)
                 button:SetPreview(item.preview)
                 button:SetStatusIcon(item.statusIcon)
@@ -1557,6 +1563,8 @@ local configure = function(f)
 
         for i = itemIndex + 1, #self.items do
             self.items[i]:Hide()
+            self.items[i]:SetIconDecorator(nil)
+            self.items[i].reserveSubtext = nil
             self.items[i].contextMenuItems = nil
             self.items[i].onShowContextMenu = nil
             self.items[i]:SetPreview(nil)

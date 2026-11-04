@@ -100,11 +100,17 @@ local function ConfigureFrame(f, options)
         end
     end)
 
+    f.SetDisabled = function(self, disabled)
+        input:SetEnabled(not disabled)
+        self:SetAlpha(disabled and 0.5 or 1)
+    end
+
     f.SetOptionData = function(self, option)
         self.optionData = option
         self:SetLabel(option.label)
         self:SetEditorValue(option.currentValue and option.currentValue() or '')
         self.onChange = option.onChange
+        self:SetDisabled(option.disabled)
     end
 
     f.SetMultiLine = function(self)
@@ -145,6 +151,7 @@ editBox.Create = function(self, options, parent)
 
     f.Destroy = function(self)
         self:SetEditorValue('')
+        self:SetDisabled(false)
         editBox.pool:Release(self)
     end
 

@@ -251,7 +251,9 @@ local function ConfigureFrame(f)
             self:ClearFocus()
             return
         end
-        value = math.max(math.min(value, f.max), f.min)
+        if not (f.optionData and f.optionData.allowAnyValue) then
+            value = math.max(math.min(value, f.max), f.min)
+        end
         f:SetValue('value', value)
         self:ClearFocus()
     end)
@@ -309,6 +311,13 @@ local function ConfigureFrame(f)
         valueText:SetText('')
         fillFrame:SetWidth(EXFrames:ScalePixels(1, bar))
         self:ApplySparkLayout(self.trackInset)
+        self:SetDisabled(false)
+    end
+
+    -- The bar handles all input, so turning its mouse off locks the slider.
+    f.SetDisabled = function(self, disabled)
+        bar:EnableMouse(not disabled)
+        self:SetAlpha(disabled and 0.5 or 1)
     end
 
     f.SetState = function(self, value)
@@ -335,6 +344,7 @@ local function ConfigureFrame(f)
         self:SetValue('value', value)
         self.suppressOnChange = false
         self:UpdateSparkPosition()
+        self:SetDisabled(option.disabled)
     end
 
     f.SetOnChange = function(self, onChange)
