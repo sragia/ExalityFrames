@@ -454,6 +454,11 @@ local function ConfigureFrame(f)
         ApplyScroll(self, value)
     end
 
+    f.SmoothScrollTo = function(self, value)
+        self.targetScroll = math.max(0, math.min(value, GetMaxScroll(self)))
+        EnsureOnUpdate(self)
+    end
+
     f.Reset = function(self)
         self.reconcileGeneration = (self.reconcileGeneration or 0) + 1
         self.draggingThumb = false
