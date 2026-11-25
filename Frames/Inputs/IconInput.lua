@@ -1,4 +1,4 @@
-local _, ns = ...
+local addonName, ns = ...
 ---@class ExalityFrames
 local EXFrames = ns.EXFrames
 
@@ -289,7 +289,7 @@ local function EnsurePopup()
     overlay:RegisterForClicks('AnyUp')
     overlay:Hide()
 
-    local frame = CreateFrame('Frame', 'EXUIIconSelectorPopup', overlay)
+    local frame = CreateFrame('Frame', addonName == 'ExalityUI' and 'EXUIIconSelectorPopup' or addonName .. 'IconSelectorPopup', overlay)
     frame:SetSize(300, 392)
     frame:SetPoint('CENTER')
     frame:SetFrameStrata('FULLSCREEN_DIALOG')

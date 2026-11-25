@@ -1,4 +1,4 @@
-local _, ns = ...
+local addonName, ns = ...
 
 ---@class ExalityFrames
 local EXFrames = ns.EXFrames
@@ -6,17 +6,48 @@ local EXFrames = ns.EXFrames
 ---@class ExalityFramesListMenu
 local listMenu = EXFrames:GetFrame('list-menu-frame')
 
-local ROW_HEIGHT = 24
 local HEADER_HEIGHT = 16
 local DIVIDER_HEIGHT = 9
 local PADDING = 6
 local ROW_GAP = 2
 local HEADER_GAP = 8
-local MIN_WIDTH = 140
 local MAX_WIDTH = 320
 local ICON_COLUMN = 28
 local ROW_TEXT_INSET = 6
 local ANCHOR_GAP = 4
+
+local STYLES = {
+    default = { rowHeight = 24, minWidth = 140, iconSize = 18, iconLeft = 4 },
+    drawer = { rowHeight = 26, minWidth = 180, iconSize = 16, iconLeft = 6, atlas = true },
+}
+
+local PANEL_SLICE = 6
+local GLOW_ALPHA = 0.65
+local GLOW_HOVER_ALPHA = 0.8
+local ROW_ATLAS_W, ROW_ATLAS_H = 472, 329
+local ROW_ATLAS_SLICE = 4
+local ROW_ATLAS_RECTS = {
+    simpleBg = { 6, 117, 199, 140 },
+    simpleBorderOff = { 6, 144, 199, 167 },
+    simpleGlowOff = { 6, 171, 135, 194 },
+    simpleGlowOn = { 6, 225, 135, 248 },
+}
+
+local function applyRowAtlas(tex, key)
+    local rect = ROW_ATLAS_RECTS[key]
+    tex:SetTexture(EXFrames.assets.textures.splitOptions.atlas)
+    EXFrames.utils.texture.applySlice(tex, ROW_ATLAS_SLICE, tex:GetParent(), Enum.UITextureSliceMode.Stretched)
+    tex:SetTexCoord(rect[1] / ROW_ATLAS_W, (rect[3] + 1) / ROW_ATLAS_W, rect[2] / ROW_ATLAS_H,
+        (rect[4] + 1) / ROW_ATLAS_H)
+end
+
+local function applyPanelSlice(tex, texturePath, color)
+    tex:SetTexture(texturePath)
+    tex:SetVertexColor(color[1], color[2], color[3], color[4] or 1)
+    tex:SetTextureSliceMargins(PANEL_SLICE, PANEL_SLICE, PANEL_SLICE, PANEL_SLICE)
+    tex:SetTextureSliceMode(Enum.UITextureSliceMode.Stretched)
+    tex:SetAllPoints()
+end
 
 local function unpackColor(color, fallback)
     if color then
@@ -66,11 +97,12 @@ local function measureWidth(panel, entries)
         maxText = math.max(maxText, panel.measureFont:GetStringWidth())
     end
 
-    local anchorWidth = panel.anchorWidth or MIN_WIDTH
+    local minWidth = panel.style.minWidth
+    local anchorWidth = panel.anchorWidth or minWidth
     local hasIcon = entriesHaveIcon(entries)
     local horizontalPadding = hasIcon and (ICON_COLUMN + ROW_TEXT_INSET) or (ROW_TEXT_INSET * 2)
     local contentWidth = maxText + horizontalPadding
-    return math.min(MAX_WIDTH, math.max(MIN_WIDTH, anchorWidth, contentWidth))
+    return math.min(MAX_WIDTH, math.max(minWidth, anchorWidth, contentWidth))
 end
 
 local function positionPanel(panel, anchorBtn)
@@ -104,17 +136,19 @@ local function positionPanel(panel, anchorBtn)
 
     -- Anchors can land between pixels, which drops the unsnapped 1px border lines.
     EXFrames:SnapFrameToPixels(panel)
-    panel.PPBorder:SetBorderThickness(1)
+    if panel.PPBorder then
+        panel.PPBorder:SetBorderThickness(1)
+    end
 end
 
-local function rowExtent(entry)
+local function rowExtent(entry, style)
     if entry.isDivider then
         return DIVIDER_HEIGHT
     end
     if entry.isHeader then
         return HEADER_HEIGHT
     end
-    return ROW_HEIGHT
+    return style.rowHeight
 end
 
 local function gapBefore(entry, previous)
@@ -127,6 +161,15 @@ local function gapBefore(entry, previous)
     return ROW_GAP
 end
 
+local function setRowHighlight(row, hovered, bgColor, hoverColor)
+    if row.glow then
+        applyRowAtlas(row.glow, hovered and 'simpleGlowOn' or 'simpleGlowOff')
+        row.glow:SetAlpha(hovered and GLOW_HOVER_ALPHA or GLOW_ALPHA)
+    else
+        row.bg:SetVertexColor(unpack(hovered and hoverColor or bgColor))
+    end
+end
+
 local function configureRow(row, entry, theme, parentPanel)
     row.listEntry = entry
     row.label:ClearAllPoints()
@@ -136,6 +179,10 @@ local function configureRow(row, entry, theme, parentPanel)
     if entry.isHeader or entry.isDivider then
         row:EnableMouse(false)
         row.bg:Hide()
+        if row.glow then
+            row.glow:Hide()
+            row.border:Hide()
+        end
         row.icon:Hide()
         row.label:SetPoint('LEFT', row, 'LEFT', ROW_TEXT_INSET, 0)
         row.label:SetText(entry.text or entry.label or '')
@@ -146,18 +193,22 @@ local function configureRow(row, entry, theme, parentPanel)
         return
     end
 
-    local bgR, bgG, bgB, bgA = unpackColor(nil, theme.backgroundLight)
-    local hoverR, hoverG, hoverB, hoverA
+    local bgColor = { unpackColor(nil, theme.backgroundLight) }
+    local hoverColor
     if entry.hoverColor then
-        hoverR, hoverG, hoverB, hoverA = unpackColor(entry.hoverColor, theme.backgroundPanel)
+        hoverColor = { unpackColor(entry.hoverColor, theme.backgroundPanel) }
     else
         local panel = theme.backgroundPanel
-        hoverR, hoverG, hoverB, hoverA = panel[1], panel[2], panel[3], 1
+        hoverColor = { panel[1], panel[2], panel[3], 1 }
     end
     local textR, textG, textB, textA = unpackColor(entry.color, theme.text)
 
     row:EnableMouse(true)
     row.bg:Show()
+    if row.glow then
+        row.glow:Show()
+        row.border:Show()
+    end
     setRowIcon(row.icon, entry.icon)
     if entry.icon then
         row.label:SetPoint('LEFT', row.icon, 'RIGHT', 6, 0)
@@ -167,15 +218,15 @@ local function configureRow(row, entry, theme, parentPanel)
     row.label:SetText(entry.text or entry.label or '')
     row.label:SetTextColor(textR, textG, textB, textA)
 
-    row.bg:SetVertexColor(bgR, bgG, bgB, bgA)
+    setRowHighlight(row, false, bgColor, hoverColor)
     row:SetScript('OnEnter', function(btn)
-        btn.bg:SetVertexColor(hoverR, hoverG, hoverB, hoverA)
+        setRowHighlight(btn, true, bgColor, hoverColor)
         if btn.listEntry and btn.listEntry.onEnter then
             pcall(btn.listEntry.onEnter, btn)
         end
     end)
     row:SetScript('OnLeave', function(btn)
-        btn.bg:SetVertexColor(bgR, bgG, bgB, bgA)
+        setRowHighlight(btn, false, bgColor, hoverColor)
         if btn.listEntry and btn.listEntry.onLeave then
             pcall(btn.listEntry.onLeave, btn)
         end
@@ -196,20 +247,54 @@ local function configureRow(row, entry, theme, parentPanel)
     end)
 end
 
-local function createPanel(frameName)
+local function createRowArt(row, style, theme)
+    local rowBg = row:CreateTexture(nil, 'BACKGROUND')
+    rowBg:SetAllPoints()
+    row.bg = rowBg
+
+    if style.atlas then
+        applyRowAtlas(rowBg, 'simpleBg')
+
+        local glow = row:CreateTexture(nil, 'BACKGROUND', nil, 1)
+        glow:SetAllPoints()
+        row.glow = glow
+
+        local border = row:CreateTexture(nil, 'OVERLAY')
+        border:SetAllPoints()
+        applyRowAtlas(border, 'simpleBorderOff')
+        row.border = border
+    else
+        rowBg:SetTexture(EXFrames.assets.textures.solidWhite)
+        rowBg:SetVertexColor(unpackColor(nil, theme.backgroundLight))
+    end
+end
+
+local function createPanel(frameName, styleKey)
     local theme = EXFrames.Theme
+    local style = STYLES[styleKey]
     local panel = CreateFrame('Frame', frameName, UIParent)
     panel:SetFrameStrata('TOOLTIP')
     panel:SetClampedToScreen(true)
     panel:EnableMouse(true)
     panel:Hide()
+    panel.style = style
 
-    EXFrames:ApplyPanelChrome(panel, {
-        fillColor = theme.backgroundDeep,
-        borderColor = theme.border,
-        borderShown = true,
-    })
-    panel.bg = panel.PanelFill
+    if style.atlas then
+        local textures = EXFrames.assets.textures.ui
+        local bg = panel:CreateTexture(nil, 'BACKGROUND')
+        applyPanelSlice(bg, textures.panelBg, theme.backgroundDeep)
+        panel.bg = bg
+
+        local border = panel:CreateTexture(nil, 'OVERLAY', nil, 1)
+        applyPanelSlice(border, textures.panelBorder, theme.border)
+    else
+        EXFrames:ApplyPanelChrome(panel, {
+            fillColor = theme.backgroundDeep,
+            borderColor = theme.border,
+            borderShown = true,
+        })
+        panel.bg = panel.PanelFill
+    end
 
     panel.rows = {}
     panel.rowPool = CreateFramePool('Button', panel)
@@ -222,18 +307,18 @@ local function createPanel(frameName)
         wipe(f.rows)
 
         f.anchorBtn = anchorBtn
-        f.anchorWidth = anchorBtn and anchorBtn:GetWidth() or MIN_WIDTH
+        f.anchorWidth = anchorBtn and anchorBtn:GetWidth() or style.minWidth
 
         local count = #entries
         if count == 0 then
-            f:SetSize(MIN_WIDTH, ROW_HEIGHT)
+            f:SetSize(style.minWidth, style.rowHeight)
             return
         end
 
         local width = measureWidth(f, entries)
         local height = PADDING * 2
         for index, entry in ipairs(entries) do
-            height = height + gapBefore(entry, entries[index - 1]) + rowExtent(entry)
+            height = height + gapBefore(entry, entries[index - 1]) + rowExtent(entry, style)
         end
         f:SetSize(width + (PADDING * 2), height)
 
@@ -241,20 +326,16 @@ local function createPanel(frameName)
         for index, entry in ipairs(entries) do
             local row = f.rowPool:Acquire()
             row:SetParent(f)
-            row:SetSize(width, rowExtent(entry))
+            row:SetSize(width, rowExtent(entry, style))
             row:SetFrameLevel(f:GetFrameLevel() + 1)
             row:RegisterForClicks('AnyUp')
 
             if not row.bg then
-                local rowBg = row:CreateTexture(nil, 'BACKGROUND')
-                rowBg:SetTexture(EXFrames.assets.textures.solidWhite)
-                rowBg:SetAllPoints()
-                rowBg:SetVertexColor(unpackColor(nil, theme.backgroundLight))
-                row.bg = rowBg
+                createRowArt(row, style, theme)
 
                 local icon = row:CreateTexture(nil, 'ARTWORK')
-                icon:SetSize(18, 18)
-                icon:SetPoint('LEFT', row, 'LEFT', 4, 0)
+                icon:SetSize(style.iconSize, style.iconSize)
+                icon:SetPoint('LEFT', row, 'LEFT', style.iconLeft, 0)
                 row.icon = icon
 
                 local label = row:CreateFontString(nil, 'OVERLAY')
@@ -322,20 +403,42 @@ local function createPanel(frameName)
 end
 
 listMenu.Init = function(self)
-    self.panel = createPanel('ExalityUIListMenu')
+    self.panels = { default = createPanel(addonName .. 'ListMenu', 'default') }
+    self.panel = self.panels.default
+end
+
+---@param styleKey? 'default'|'drawer'
+listMenu.GetPanel = function(self, styleKey)
+    if not self.panels then
+        self:Init()
+    end
+    styleKey = STYLES[styleKey] and styleKey or 'default'
+    if not self.panels[styleKey] then
+        self.panels[styleKey] = createPanel(addonName .. 'ListMenu_' .. styleKey, styleKey)
+    end
+    return self.panels[styleKey]
+end
+
+listMenu.GetOpenPanel = function(self)
+    for _, panel in pairs(self.panels or {}) do
+        if panel:IsShown() then
+            return panel
+        end
+    end
 end
 
 listMenu.IsOpen = function(self)
-    return self.panel and self.panel:IsShown()
+    return self:GetOpenPanel() ~= nil
 end
 
 listMenu.GetAnchor = function(self)
-    return self.panel and self.panel.anchorBtn
+    local panel = self:GetOpenPanel()
+    return panel and panel.anchorBtn
 end
 
 listMenu.Hide = function(self)
-    if self.panel then
-        self.panel:Hide()
+    for _, panel in pairs(self.panels or {}) do
+        panel:Hide()
     end
 end
 
@@ -361,17 +464,22 @@ listMenu.BuildContextEntries = function(self, itemID, menuItems)
     return entries
 end
 
-listMenu.ShowAt = function(self, anchorBtn, entries)
-    if not self.panel then
-        self:Init()
+---@param styleKey? 'default'|'drawer'
+listMenu.ShowAt = function(self, anchorBtn, entries, styleKey)
+    local target = self:GetPanel(styleKey)
+    for _, panel in pairs(self.panels) do
+        if panel ~= target then
+            panel:Hide()
+        end
     end
-    self.panel:ShowAt(anchorBtn, entries)
+    target:ShowAt(anchorBtn, entries)
 end
 
-listMenu.ToggleAt = function(self, anchorBtn, entries)
+---@param styleKey? 'default'|'drawer'
+listMenu.ToggleAt = function(self, anchorBtn, entries, styleKey)
     if self:IsOpen() and self:GetAnchor() == anchorBtn then
         self:Hide()
         return
     end
-    self:ShowAt(anchorBtn, entries)
+    self:ShowAt(anchorBtn, entries, styleKey)
 end

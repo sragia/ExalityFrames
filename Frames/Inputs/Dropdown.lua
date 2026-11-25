@@ -2,7 +2,7 @@ local _, ns = ...
 ---@class ExalityFrames
 local EXFrames = ns.EXFrames
 
-local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
+local LSM = LibStub and LibStub:GetLibrary("LibSharedMedia-3.0", true)
 
 ---@class ExalityFramesSmoothScrollFrame
 local scrollFrame = EXFrames:GetFrame('smooth-scroll-frame')

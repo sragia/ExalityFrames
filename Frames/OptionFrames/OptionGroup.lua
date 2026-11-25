@@ -5,7 +5,7 @@ local EXUI = select(2, ...)
 local EXFrames = ns.EXFrames
 
 local function getExpandSessionStore()
-    if EXUI then
+    if EXUI.GetModule then
         local fields = EXUI:GetModule('options-fields')
         fields.optionGroupExpandSession = fields.optionGroupExpandSession or {}
         return fields.optionGroupExpandSession

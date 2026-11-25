@@ -751,6 +751,9 @@ ns.EXFrames.assets = {
       bg = BASE_PATH .. 'Assets\\Window\\bg',
       resizeBtn = BASE_PATH .. 'Assets\\Window\\resize-btn',
       resizeBtnHighlight = BASE_PATH .. 'Assets\\Window\\resize-btn-highlight',
+      mainBg = BASE_PATH .. 'Assets\\Window\\main-bg.png',
+      topBar = BASE_PATH .. 'Assets\\Window\\top-bar.png',
+      closeIcon = BASE_PATH .. 'Assets\\Window\\icon-close.png',
     },
     button = {
       sprite = BASE_PATH .. 'Assets\\Button\\sprite.png',

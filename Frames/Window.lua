@@ -25,9 +25,9 @@ window.Init = function(self)
 end
 
 local DEFAULT_CHROME = {
-    backgroundTexture = [[Interface/Addons/ExalityUI/Options/Assets/main-bg_2.png]],
-    headerTexture = [[Interface/Addons/ExalityUI/Options/Assets/top-bar.png]],
-    closeIcon = [[Interface/Addons/ExalityUI/Options/Assets/icon-close.png]],
+    backgroundTexture = EXFrames.assets.textures.window.mainBg,
+    headerTexture = EXFrames.assets.textures.window.topBar,
+    closeIcon = EXFrames.assets.textures.window.closeIcon,
 }
 
 local configure = function(frame)
